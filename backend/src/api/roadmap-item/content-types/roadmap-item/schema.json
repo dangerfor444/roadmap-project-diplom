@@ -1,0 +1,39 @@
+{
+  "kind": "collectionType",
+  "collectionName": "roadmap_items",
+  "info": {
+    "singularName": "roadmap-item",
+    "pluralName": "roadmap-items",
+    "displayName": "Roadmap Item",
+    "description": "Public roadmap entries"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "title": {
+      "type": "string",
+      "required": true,
+      "minLength": 3,
+      "maxLength": 120
+    },
+    "description": {
+      "type": "text",
+      "required": true,
+      "minLength": 3,
+      "maxLength": 2000
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": ["planned", "in_progress", "done"],
+      "default": "planned",
+      "required": true
+    },
+    "category": {
+      "type": "string",
+      "required": false,
+      "maxLength": 80
+    }
+  }
+}

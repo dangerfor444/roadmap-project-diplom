@@ -1,0 +1,29 @@
+{
+  "kind": "collectionType",
+  "collectionName": "votes",
+  "info": {
+    "singularName": "vote",
+    "pluralName": "votes",
+    "displayName": "Vote",
+    "description": "A single vote for an idea by fingerprint"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "idea": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::idea.idea",
+      "inversedBy": "votes",
+      "required": true
+    },
+    "userFingerprint": {
+      "type": "string",
+      "required": true,
+      "minLength": 8,
+      "maxLength": 128
+    }
+  }
+}

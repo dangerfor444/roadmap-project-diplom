@@ -1,0 +1,40 @@
+{
+  "kind": "collectionType",
+  "collectionName": "comments",
+  "info": {
+    "singularName": "comment",
+    "pluralName": "comments",
+    "displayName": "Comment",
+    "description": "Comments on ideas"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "idea": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::idea.idea",
+      "inversedBy": "comments",
+      "required": true
+    },
+    "text": {
+      "type": "text",
+      "required": true,
+      "minLength": 1,
+      "maxLength": 2000
+    },
+    "userFingerprint": {
+      "type": "string",
+      "required": true,
+      "minLength": 8,
+      "maxLength": 128
+    },
+    "isHidden": {
+      "type": "boolean",
+      "required": true,
+      "default": false
+    }
+  }
+}

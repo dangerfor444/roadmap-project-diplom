@@ -1,0 +1,52 @@
+{
+  "kind": "collectionType",
+  "collectionName": "ideas",
+  "info": {
+    "singularName": "idea",
+    "pluralName": "ideas",
+    "displayName": "Idea",
+    "description": "User-submitted product ideas"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "title": {
+      "type": "string",
+      "required": true,
+      "minLength": 3,
+      "maxLength": 140
+    },
+    "description": {
+      "type": "text",
+      "required": true,
+      "minLength": 3,
+      "maxLength": 3000
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": ["new", "under_review", "planned", "declined", "done"],
+      "default": "new",
+      "required": true
+    },
+    "votesCount": {
+      "type": "integer",
+      "required": true,
+      "default": 0,
+      "min": 0
+    },
+    "votes": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::vote.vote",
+      "mappedBy": "idea"
+    },
+    "comments": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::comment.comment",
+      "mappedBy": "idea"
+    }
+  }
+}
