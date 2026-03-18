@@ -1,0 +1,42 @@
+{
+  "kind": "collectionType",
+  "collectionName": "roadmap_votes",
+  "info": {
+    "singularName": "roadmap-vote",
+    "pluralName": "roadmap-votes",
+    "displayName": "Roadmap Vote",
+    "description": "A single vote for a roadmap item by fingerprint"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "indexes": [
+    {
+      "name": "roadmap_votes_item_fingerprint_unique",
+      "columns": ["roadmap_item_document_id", "user_fingerprint"],
+      "type": "unique"
+    }
+  ],
+  "attributes": {
+    "roadmapItem": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::roadmap-item.roadmap-item",
+      "inversedBy": "votes",
+      "required": true
+    },
+    "roadmapItemDocumentId": {
+      "type": "string",
+      "required": true,
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "userFingerprint": {
+      "type": "string",
+      "required": true,
+      "minLength": 8,
+      "maxLength": 128
+    }
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "kind": "collectionType",
+  "collectionName": "roadmap_comments",
+  "info": {
+    "singularName": "roadmap-comment",
+    "pluralName": "roadmap-comments",
+    "displayName": "Roadmap Comment",
+    "description": "Comments on roadmap items"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "config": {
+    "settings": {
+      "searchable": true,
+      "filterable": true,
+      "bulkable": true,
+      "pageSize": 25,
+      "mainField": "id",
+      "defaultSortBy": "createdAt",
+      "defaultSortOrder": "DESC",
+      "relationOpenMode": "modal"
+    },
+    "layouts": {
+      "list": ["roadmapItem", "isHidden", "createdAt", "userFingerprint"],
+      "edit": [
+        [
+          { "name": "roadmapItem", "size": 8 },
+          { "name": "isHidden", "size": 4 }
+        ],
+        [{ "name": "userFingerprint", "size": 12 }],
+        [{ "name": "text", "size": 12 }]
+      ]
+    }
+  },
+  "indexes": [
+    {
+      "name": "roadmap_comments_hidden_created_at_idx",
+      "columns": ["is_hidden", "created_at"]
+    }
+  ],
+  "attributes": {
+    "roadmapItem": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::roadmap-item.roadmap-item",
+      "inversedBy": "comments",
+      "required": true
+    },
+    "text": {
+      "type": "text",
+      "required": true,
+      "minLength": 1,
+      "maxLength": 2000
+    },
+    "userFingerprint": {
+      "type": "string",
+      "required": true,
+      "minLength": 8,
+      "maxLength": 128
+    },
+    "isHidden": {
+      "type": "boolean",
+      "required": true,
+      "default": false
+    }
+  }
+}

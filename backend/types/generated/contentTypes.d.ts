@@ -487,6 +487,11 @@ export interface ApiIdeaIdea extends Struct.CollectionTypeSchema {
     draftAndPublish: false;
   };
   attributes: {
+    authorFingerprint: Schema.Attribute.String &
+      Schema.Attribute.SetMinMaxLength<{
+        maxLength: 128;
+        minLength: 8;
+      }>;
     comments: Schema.Attribute.Relation<'oneToMany', 'api::comment.comment'>;
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
@@ -528,6 +533,55 @@ export interface ApiIdeaIdea extends Struct.CollectionTypeSchema {
   };
 }
 
+export interface ApiRoadmapCommentRoadmapComment
+  extends Struct.CollectionTypeSchema {
+  collectionName: 'roadmap_comments';
+  info: {
+    description: 'Comments on roadmap items';
+    displayName: 'Roadmap Comment';
+    pluralName: 'roadmap-comments';
+    singularName: 'roadmap-comment';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    isHidden: Schema.Attribute.Boolean &
+      Schema.Attribute.Required &
+      Schema.Attribute.DefaultTo<false>;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::roadmap-comment.roadmap-comment'
+    > &
+      Schema.Attribute.Private;
+    publishedAt: Schema.Attribute.DateTime;
+    roadmapItem: Schema.Attribute.Relation<
+      'manyToOne',
+      'api::roadmap-item.roadmap-item'
+    > &
+      Schema.Attribute.Required;
+    text: Schema.Attribute.Text &
+      Schema.Attribute.Required &
+      Schema.Attribute.SetMinMaxLength<{
+        maxLength: 2000;
+        minLength: 1;
+      }>;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    userFingerprint: Schema.Attribute.String &
+      Schema.Attribute.Required &
+      Schema.Attribute.SetMinMaxLength<{
+        maxLength: 128;
+        minLength: 8;
+      }>;
+  };
+}
+
 export interface ApiRoadmapItemRoadmapItem extends Struct.CollectionTypeSchema {
   collectionName: 'roadmap_items';
   info: {
@@ -544,6 +598,19 @@ export interface ApiRoadmapItemRoadmapItem extends Struct.CollectionTypeSchema {
       Schema.Attribute.SetMinMaxLength<{
         maxLength: 80;
       }>;
+    comments: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::roadmap-comment.roadmap-comment'
+    >;
+    commentsCount: Schema.Attribute.Integer &
+      Schema.Attribute.Required &
+      Schema.Attribute.SetMinMax<
+        {
+          min: 0;
+        },
+        number
+      > &
+      Schema.Attribute.DefaultTo<0>;
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
@@ -572,6 +639,64 @@ export interface ApiRoadmapItemRoadmapItem extends Struct.CollectionTypeSchema {
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
+    votes: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::roadmap-vote.roadmap-vote'
+    >;
+    votesCount: Schema.Attribute.Integer &
+      Schema.Attribute.Required &
+      Schema.Attribute.SetMinMax<
+        {
+          min: 0;
+        },
+        number
+      > &
+      Schema.Attribute.DefaultTo<0>;
+  };
+}
+
+export interface ApiRoadmapVoteRoadmapVote extends Struct.CollectionTypeSchema {
+  collectionName: 'roadmap_votes';
+  info: {
+    description: 'A single vote for a roadmap item by fingerprint';
+    displayName: 'Roadmap Vote';
+    pluralName: 'roadmap-votes';
+    singularName: 'roadmap-vote';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::roadmap-vote.roadmap-vote'
+    > &
+      Schema.Attribute.Private;
+    publishedAt: Schema.Attribute.DateTime;
+    roadmapItem: Schema.Attribute.Relation<
+      'manyToOne',
+      'api::roadmap-item.roadmap-item'
+    > &
+      Schema.Attribute.Required;
+    roadmapItemDocumentId: Schema.Attribute.String &
+      Schema.Attribute.Required &
+      Schema.Attribute.SetMinMaxLength<{
+        maxLength: 64;
+        minLength: 1;
+      }>;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    userFingerprint: Schema.Attribute.String &
+      Schema.Attribute.Required &
+      Schema.Attribute.SetMinMaxLength<{
+        maxLength: 128;
+        minLength: 8;
+      }>;
   };
 }
 
@@ -592,6 +717,12 @@ export interface ApiVoteVote extends Struct.CollectionTypeSchema {
       Schema.Attribute.Private;
     idea: Schema.Attribute.Relation<'manyToOne', 'api::idea.idea'> &
       Schema.Attribute.Required;
+    ideaDocumentId: Schema.Attribute.String &
+      Schema.Attribute.Required &
+      Schema.Attribute.SetMinMaxLength<{
+        maxLength: 64;
+        minLength: 1;
+      }>;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<'oneToMany', 'api::vote.vote'> &
       Schema.Attribute.Private;
@@ -1121,7 +1252,9 @@ declare module '@strapi/strapi' {
       'admin::user': AdminUser;
       'api::comment.comment': ApiCommentComment;
       'api::idea.idea': ApiIdeaIdea;
+      'api::roadmap-comment.roadmap-comment': ApiRoadmapCommentRoadmapComment;
       'api::roadmap-item.roadmap-item': ApiRoadmapItemRoadmapItem;
+      'api::roadmap-vote.roadmap-vote': ApiRoadmapVoteRoadmapVote;
       'api::vote.vote': ApiVoteVote;
       'plugin::content-releases.release': PluginContentReleasesRelease;
       'plugin::content-releases.release-action': PluginContentReleasesReleaseAction;

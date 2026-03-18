@@ -1,0 +1,12 @@
+export const ROADMAP_STATUSES = new Set(['planned', 'in_progress', 'done']);
+export const IDEA_SORTS = new Set(['top', 'new']);
+export const FINGERPRINT_PATTERN = /^[A-Za-z0-9._:-]{8,128}$/;
+export const ACTOR_ID_PATTERN = /^[A-Za-z0-9._:@-]{3,96}$/;
+export const WRITE_AUTH_MODES = new Set(['demo', 'hybrid', 'auth']);
+export const IDEA_TABLE_NAME = 'ideas';
+export const ROADMAP_ITEM_TABLE_NAME = 'roadmap_items';
+export const ACTOR_TOKEN_TTL_SECONDS_DEFAULT = 3600;
+export const WIDGET_INTERNAL_AUTH_DISABLED_VALUES = new Set(['0', 'false', 'off', 'no']);
+export const CONTROL_CHARS_REGEX = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g;
+export const SCRIPT_OR_STYLE_REGEX = /<(script|style)[^>]*>[\s\S]*?<\/\1>/gi;
+export const HTML_TAG_REGEX = /<[^>]+>/g;

@@ -1,0 +1,8 @@
+{
+  "name": "diplom_project",
+  "private": true,
+  "scripts": {
+    "demo:build": "powershell -ExecutionPolicy Bypass -File ./scripts/build-prod-like.ps1",
+    "smoke:check": "powershell -ExecutionPolicy Bypass -File ./scripts/smoke-check.ps1"
+  }
+}

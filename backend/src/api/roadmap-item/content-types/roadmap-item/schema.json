@@ -11,6 +11,47 @@
     "draftAndPublish": false
   },
   "pluginOptions": {},
+  "config": {
+    "settings": {
+      "searchable": true,
+      "filterable": true,
+      "bulkable": true,
+      "pageSize": 25,
+      "mainField": "title",
+      "defaultSortBy": "createdAt",
+      "defaultSortOrder": "DESC",
+      "relationOpenMode": "modal"
+    },
+    "layouts": {
+      "list": ["title", "status", "votesCount", "commentsCount", "category", "createdAt"],
+      "edit": [
+        [
+          { "name": "title", "size": 8 },
+          { "name": "status", "size": 4 }
+        ],
+        [
+          { "name": "votesCount", "size": 3 },
+          { "name": "commentsCount", "size": 3 },
+          { "name": "category", "size": 6 }
+        ],
+        [{ "name": "description", "size": 12 }]
+      ]
+    }
+  },
+  "indexes": [
+    {
+      "name": "roadmap_items_status_created_at_idx",
+      "columns": ["status", "created_at"]
+    },
+    {
+      "name": "roadmap_items_votes_count_idx",
+      "columns": ["votes_count"]
+    },
+    {
+      "name": "roadmap_items_comments_count_idx",
+      "columns": ["comments_count"]
+    }
+  ],
   "attributes": {
     "title": {
       "type": "string",
@@ -34,6 +75,30 @@
       "type": "string",
       "required": false,
       "maxLength": 80
+    },
+    "votesCount": {
+      "type": "integer",
+      "required": true,
+      "default": 0,
+      "min": 0
+    },
+    "commentsCount": {
+      "type": "integer",
+      "required": true,
+      "default": 0,
+      "min": 0
+    },
+    "votes": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::roadmap-vote.roadmap-vote",
+      "mappedBy": "roadmapItem"
+    },
+    "comments": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::roadmap-comment.roadmap-comment",
+      "mappedBy": "roadmapItem"
     }
   }
 }

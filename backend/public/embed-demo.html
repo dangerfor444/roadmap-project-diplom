@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Embed Demo</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        color: #1f2c38;
+        background: #f3f6fa;
+      }
+      .wrap {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 24px 16px 32px;
+      }
+      .card {
+        background: #fff;
+        border: 1px solid #dce3ea;
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 16px;
+      }
+      h1 {
+        margin: 0 0 10px;
+      }
+      h2 {
+        margin: 0 0 8px;
+      }
+      p {
+        margin: 0 0 10px;
+      }
+      pre {
+        margin: 0;
+        padding: 12px;
+        overflow-x: auto;
+        border-radius: 8px;
+        background: #0f1720;
+        color: #dbe8f4;
+      }
+      code {
+        font-family: Consolas, monospace;
+        font-size: 13px;
+      }
+      #widget-host {
+        min-height: 420px;
+      }
+      .controls {
+        display: grid;
+        gap: 10px;
+        margin-bottom: 12px;
+      }
+      .field {
+        display: grid;
+        gap: 4px;
+      }
+      .field label {
+        font-size: 13px;
+        color: #304357;
+      }
+      .field input {
+        border: 1px solid #cfd7df;
+        border-radius: 8px;
+        padding: 8px 10px;
+        font: inherit;
+      }
+      .button {
+        width: fit-content;
+        border: 1px solid #1f2c38;
+        background: #1f2c38;
+        color: #fff;
+        border-radius: 8px;
+        padding: 8px 12px;
+        cursor: pointer;
+      }
+      .meta {
+        font-size: 12px;
+        color: #526172;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="card">
+        <h1>Демо встраивания виджета</h1>
+        <p>Эта страница показывает, как передавать identity из сайта-хоста в iframe через <code>embed.js</code> и <code>postMessage</code>.</p>
+      </div>
+
+      <div class="card">
+        <h2>Snippet (prod-like)</h2>
+        <pre><code>&lt;script
+  src="http://localhost:1337/embed.js"
+  data-project="default"
+  data-target="#widget-host"
+  data-height="760"
+  data-frame-id="roadmap-widget-frame"
+  data-api-name="RoadmapEmbed"
+  data-actor-token="&lt;signed-token&gt;"
+&gt;&lt;/script&gt;
+
+&lt;script&gt;
+  // optional runtime refresh (for token rotation)
+  window.RoadmapEmbed.setAuth({ actorToken: '&lt;new-token&gt;' });
+&lt;/script&gt;</code></pre>
+      </div>
+
+      <div class="card">
+        <h2>Живой пример</h2>
+        <div class="controls">
+          <div class="field">
+            <label for="actor-id">Actor ID (опционально)</label>
+            <input id="actor-id" placeholder="user_123" />
+          </div>
+          <div class="field">
+            <label for="actor-token">Actor Token (signed)</label>
+            <input id="actor-token" placeholder="payload.signature" />
+          </div>
+          <button class="button" id="apply-auth" type="button">Применить auth в iframe</button>
+          <p class="meta">Кнопка вызывает <code>window.RoadmapEmbedDemo.setAuth(...)</code> без перезагрузки виджета.</p>
+        </div>
+        <div id="widget-host"></div>
+      </div>
+    </div>
+
+    <script
+      src="/embed.js"
+      data-project="default"
+      data-target="#widget-host"
+      data-height="760"
+      data-frame-id="roadmap-widget-frame"
+      data-api-name="RoadmapEmbedDemo"
+    ></script>
+
+    <script>
+      (function () {
+        var idInput = document.getElementById('actor-id');
+        var tokenInput = document.getElementById('actor-token');
+        var applyButton = document.getElementById('apply-auth');
+
+        if (!idInput || !tokenInput || !applyButton) {
+          return;
+        }
+
+        applyButton.addEventListener('click', function () {
+          if (!window.RoadmapEmbedDemo || typeof window.RoadmapEmbedDemo.setAuth !== 'function') {
+            return;
+          }
+
+          window.RoadmapEmbedDemo.setAuth({
+            actorId: idInput.value,
+            actorToken: tokenInput.value,
+          });
+        });
+      })();
+    </script>
+  </body>
+</html>

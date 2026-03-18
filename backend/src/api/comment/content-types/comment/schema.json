@@ -11,6 +11,35 @@
     "draftAndPublish": false
   },
   "pluginOptions": {},
+  "config": {
+    "settings": {
+      "searchable": true,
+      "filterable": true,
+      "bulkable": true,
+      "pageSize": 25,
+      "mainField": "id",
+      "defaultSortBy": "createdAt",
+      "defaultSortOrder": "DESC",
+      "relationOpenMode": "modal"
+    },
+    "layouts": {
+      "list": ["idea", "isHidden", "createdAt", "userFingerprint"],
+      "edit": [
+        [
+          { "name": "idea", "size": 8 },
+          { "name": "isHidden", "size": 4 }
+        ],
+        [{ "name": "userFingerprint", "size": 12 }],
+        [{ "name": "text", "size": 12 }]
+      ]
+    }
+  },
+  "indexes": [
+    {
+      "name": "comments_hidden_created_at_idx",
+      "columns": ["is_hidden", "created_at"]
+    }
+  ],
   "attributes": {
     "idea": {
       "type": "relation",

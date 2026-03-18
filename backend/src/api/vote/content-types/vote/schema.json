@@ -11,6 +11,13 @@
     "draftAndPublish": false
   },
   "pluginOptions": {},
+  "indexes": [
+    {
+      "name": "votes_idea_fingerprint_unique",
+      "columns": ["idea_document_id", "user_fingerprint"],
+      "type": "unique"
+    }
+  ],
   "attributes": {
     "idea": {
       "type": "relation",
@@ -18,6 +25,12 @@
       "target": "api::idea.idea",
       "inversedBy": "votes",
       "required": true
+    },
+    "ideaDocumentId": {
+      "type": "string",
+      "required": true,
+      "minLength": 1,
+      "maxLength": 64
     },
     "userFingerprint": {
       "type": "string",

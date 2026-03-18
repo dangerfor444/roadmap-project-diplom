@@ -11,6 +11,40 @@
     "draftAndPublish": false
   },
   "pluginOptions": {},
+  "config": {
+    "settings": {
+      "searchable": true,
+      "filterable": true,
+      "bulkable": true,
+      "pageSize": 25,
+      "mainField": "title",
+      "defaultSortBy": "createdAt",
+      "defaultSortOrder": "DESC",
+      "relationOpenMode": "modal"
+    },
+    "layouts": {
+      "list": ["title", "status", "authorFingerprint", "votesCount", "createdAt"],
+      "edit": [
+        [
+          { "name": "title", "size": 8 },
+          { "name": "status", "size": 4 }
+        ],
+        [{ "name": "authorFingerprint", "size": 12 }],
+        [{ "name": "votesCount", "size": 4 }],
+        [{ "name": "description", "size": 12 }]
+      ]
+    }
+  },
+  "indexes": [
+    {
+      "name": "ideas_status_created_at_idx",
+      "columns": ["status", "created_at"]
+    },
+    {
+      "name": "ideas_votes_count_idx",
+      "columns": ["votes_count"]
+    }
+  ],
   "attributes": {
     "title": {
       "type": "string",
@@ -35,6 +69,12 @@
       "required": true,
       "default": 0,
       "min": 0
+    },
+    "authorFingerprint": {
+      "type": "string",
+      "required": false,
+      "minLength": 8,
+      "maxLength": 128
     },
     "votes": {
       "type": "relation",
