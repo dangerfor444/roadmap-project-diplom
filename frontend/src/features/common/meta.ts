@@ -1,4 +1,4 @@
-import type { IdeaSort, IdeaStatus, RoadmapStatus } from '../../types/public-api';
+﻿import type { IdeaSort, IdeaStatus, RoadmapStatus } from '../../types/public-api';
 
 export type RoadmapFilter = RoadmapStatus | 'all';
 
@@ -10,8 +10,9 @@ export const ROADMAP_FILTERS: Array<{ value: RoadmapFilter; label: string }> = [
 ];
 
 export const IDEAS_SORTS: Array<{ value: IdeaSort; label: string }> = [
-  { value: 'top', label: 'Топ' },
-  { value: 'new', label: 'Новые' },
+  { value: 'latest', label: 'Последние' },
+  { value: 'popular', label: 'Популярные' },
+  { value: 'discussed', label: 'Обсуждаемые' },
 ];
 
 export const ROADMAP_STATUS_LABEL: Record<RoadmapStatus, string> = {

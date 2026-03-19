@@ -9,6 +9,8 @@
     "deploy": "strapi deploy",
     "dev": "strapi develop",
     "develop": "strapi develop",
+    "seed:demo": "node scripts/seed-demo.js",
+    "seed:comments": "node scripts/seed-extra-comments.js",
     "start": "strapi start",
     "strapi": "strapi",
     "upgrade": "npx @strapi/upgrade latest",
@@ -23,7 +25,8 @@
     "react": "^18.0.0",
     "react-dom": "^18.0.0",
     "react-router-dom": "^6.0.0",
-    "styled-components": "^6.0.0"
+    "styled-components": "^6.0.0",
+    "swagger-ui-dist": "^5.32.1"
   },
   "devDependencies": {
     "@types/node": "^20",

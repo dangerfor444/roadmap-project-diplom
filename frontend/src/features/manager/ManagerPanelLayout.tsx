@@ -1,16 +1,23 @@
-import { NavLink, Outlet } from 'react-router-dom';
+﻿import { NavLink, Outlet } from 'react-router-dom';
 
 const MANAGER_PANEL_ENABLED = (import.meta.env.VITE_MANAGER_PANEL_ENABLED ?? 'true') === 'true';
+
+const UI_TEXT = {
+  disabledTitle: 'Панель управления отключена',
+  disabledDescription:
+    'Включите `VITE_MANAGER_PANEL_ENABLED=true` и перезапустите клиент, чтобы использовать этот раздел.',
+  title: 'Панель управления продуктом',
+  description:
+    'Внутренний интерфейс для управления roadmap и идеями.',
+  ideas: 'Идеи',
+} as const;
 
 export const ManagerPanelLayout = () => {
   if (!MANAGER_PANEL_ENABLED) {
     return (
       <section className="tab-content">
-        <h2>Панель управления отключена</h2>
-        <p className="meta">
-          Включите `VITE_MANAGER_PANEL_ENABLED=true` и перезапустите клиент, чтобы использовать
-          этот раздел.
-        </p>
+        <h2>{UI_TEXT.disabledTitle}</h2>
+        <p className="meta">{UI_TEXT.disabledDescription}</p>
       </section>
     );
   }
@@ -18,11 +25,8 @@ export const ManagerPanelLayout = () => {
   return (
     <section className="manager-panel">
       <header className="manager-header">
-        <h2>Панель управления продуктом</h2>
-        <p className="meta">
-          Доступ разрешен только администратору. Все действия выполняются через защищенные
-          методы панели управления.
-        </p>
+        <h2>{UI_TEXT.title}</h2>
+        <p className="meta">{UI_TEXT.description}</p>
       </header>
 
       <nav className="manager-nav">
@@ -36,13 +40,7 @@ export const ManagerPanelLayout = () => {
           to="/manager/ideas"
           className={({ isActive }) => (isActive ? 'tab tab-active' : 'tab')}
         >
-          Идеи
-        </NavLink>
-        <NavLink
-          to="/manager/moderation"
-          className={({ isActive }) => (isActive ? 'tab tab-active' : 'tab')}
-        >
-          Модерация
+          {UI_TEXT.ideas}
         </NavLink>
       </nav>
 

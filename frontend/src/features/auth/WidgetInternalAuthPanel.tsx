@@ -8,14 +8,15 @@ import {
   registerWidgetUser,
   requestWidgetPasswordReset,
   resetWidgetPassword,
-  sendWidgetEmailConfirmation,
   saveWidgetAuthSession,
+  sendWidgetEmailConfirmation,
   type WidgetAuthSession,
 } from '../../lib/widget-auth-api';
 import { setStoredActorId, setStoredActorToken } from '../../lib/write-auth';
 
 const UI_TEXT = {
   title: 'Встроенная авторизация',
+  accountTitle: 'Аккаунт',
   loginTab: 'Вход',
   registerTab: 'Регистрация',
   emailOrUsername: 'Почта или имя пользователя',
@@ -37,16 +38,13 @@ const UI_TEXT = {
   cancel: 'Отмена',
   resetPassword: 'Сбросить пароль',
   resetPasswordLoading: 'Сброс...',
-  resendResetEmail: 'Отправить письмо еще раз',
-  refreshActorToken: 'Обновить токен пользователя',
-  refreshActorTokenLoading: 'Обновление...',
+  resendResetEmail: 'Отправить письмо ещё раз',
   logout: 'Выйти',
   pendingConfirmationPrefix: 'Ожидается подтверждение почты:',
   resendConfirmation: 'Отправить письмо повторно',
   resendConfirmationLoading: 'Отправка...',
   loggedInAsPrefix: 'Вы вошли как',
-  loginDonePrefix: 'Выполнен вход:',
-  sessionCleared: 'Сессия очищена.',
+  emailLabel: 'Почта',
   registerDone: 'Регистрация почти завершена. Мы отправили письмо на',
   registerDoneSuffix: 'Подтвердите почту и затем войдите.',
   resendConfirmationDonePrefix: 'Письмо с подтверждением отправлено повторно на',
@@ -54,8 +52,8 @@ const UI_TEXT = {
   resetEmailDoneSuffix: 'Вставьте код из письма ниже.',
   resetCodePrefilledFromLink:
     'Код из письма подставлен автоматически. Введите новый пароль.',
-  errLoginFields:
-    'Укажите почту (или имя пользователя) и пароль.',
+  logoutDone: 'Вы вышли из аккаунта.',
+  errLoginFields: 'Укажите почту или имя пользователя и пароль.',
   errLoginDefault: 'Не удалось выполнить вход.',
   errRegisterFields:
     'Для регистрации нужны почта, имя пользователя, пароль и подтверждение пароля.',
@@ -66,8 +64,7 @@ const UI_TEXT = {
   errResendEmailDefault: 'Не удалось отправить письмо подтверждения.',
   errResetEmailNoEmail: 'Укажите email для восстановления пароля.',
   errResetEmailDefault: 'Не удалось отправить письмо для сброса пароля.',
-  errResetFields:
-    'Для сброса пароля укажите код из письма и новый пароль.',
+  errResetFields: 'Для сброса пароля укажите код из письма и новый пароль.',
   errResetDefault: 'Не удалось сбросить пароль.',
 } as const;
 
@@ -82,7 +79,15 @@ const asErrorMessage = (error: unknown, fallback: string): string => {
 };
 
 const isEmailConfirmationMessage = (message: string): boolean =>
-  /confirm|подтвер|not confirmed/i.test(message.toLowerCase());
+  /confirm|подтверж|not confirmed/i.test(message.toLowerCase());
+
+const getDisplayName = (session: WidgetAuthSession | null): string => {
+  if (!session) {
+    return '';
+  }
+
+  return session.user.username || session.user.email;
+};
 
 export const WidgetInternalAuthPanel = () => {
   const [widgetSession, setWidgetSession] = useState<WidgetAuthSession | null>(() =>
@@ -99,7 +104,7 @@ export const WidgetInternalAuthPanel = () => {
   const [passwordResetStep, setPasswordResetStep] = useState<'request' | 'confirm'>('request');
   const [resetEmail, setResetEmail] = useState('');
   const [resetCode, setResetCode] = useState('');
-  const [resetPassword, setResetPassword] = useState('');
+  const [resetPasswordValue, setResetPasswordValue] = useState('');
   const [resetPasswordRepeat, setResetPasswordRepeat] = useState('');
   const [pendingConfirmationEmail, setPendingConfirmationEmail] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
@@ -115,12 +120,13 @@ export const WidgetInternalAuthPanel = () => {
       jwt: session.jwt,
       user: tokenData.user,
     };
+
     setWidgetSession(normalizedSession);
     saveWidgetAuthSession(normalizedSession);
     setStoredActorId(tokenData.actorId);
     setStoredActorToken(tokenData.actorToken);
     setPendingConfirmationEmail('');
-    setAuthInfo(`${UI_TEXT.loginDonePrefix} ${tokenData.user.email || tokenData.user.username}`);
+    setAuthInfo(null);
   };
 
   useEffect(() => {
@@ -136,15 +142,20 @@ export const WidgetInternalAuthPanel = () => {
       setAuthLoading(true);
       try {
         const tokenData = await issueActorTokenForJwt(session.jwt);
-        if (cancelled) return;
+        if (cancelled) {
+          return;
+        }
 
-        setWidgetSession({ jwt: session.jwt, user: tokenData.user });
-        saveWidgetAuthSession({ jwt: session.jwt, user: tokenData.user });
+        const normalizedSession = { jwt: session.jwt, user: tokenData.user };
+        setWidgetSession(normalizedSession);
+        saveWidgetAuthSession(normalizedSession);
         setStoredActorId(tokenData.actorId);
         setStoredActorToken(tokenData.actorToken);
-        setAuthInfo(`${UI_TEXT.loginDonePrefix} ${tokenData.user.email || tokenData.user.username}`);
+        setAuthInfo(null);
       } catch {
-        if (cancelled) return;
+        if (cancelled) {
+          return;
+        }
 
         clearWidgetAuthSession();
         setWidgetSession(null);
@@ -273,7 +284,7 @@ export const WidgetInternalAuthPanel = () => {
     setShowPasswordReset(true);
     setPasswordResetStep('request');
     setResetCode('');
-    setResetPassword('');
+    setResetPasswordValue('');
     setResetPasswordRepeat('');
     setResetEmail(identifier.includes('@') ? identifier : '');
     setAuthError(null);
@@ -308,7 +319,7 @@ export const WidgetInternalAuthPanel = () => {
     event.preventDefault();
 
     const code = resetCode.trim();
-    const password = resetPassword;
+    const password = resetPasswordValue;
     const passwordRepeat = resetPasswordRepeat;
 
     if (!code || !password || !passwordRepeat) {
@@ -335,7 +346,7 @@ export const WidgetInternalAuthPanel = () => {
       setShowPasswordReset(false);
       setPasswordResetStep('request');
       setResetCode('');
-      setResetPassword('');
+      setResetPasswordValue('');
       setResetPasswordRepeat('');
     } catch (error) {
       setAuthError(asErrorMessage(error, UI_TEXT.errResetDefault));
@@ -372,30 +383,34 @@ export const WidgetInternalAuthPanel = () => {
     setWidgetSession(null);
     setStoredActorId('');
     setStoredActorToken('');
-    setAuthInfo(UI_TEXT.sessionCleared);
+    setAuthInfo(UI_TEXT.logoutDone);
     setAuthError(null);
   };
 
   return (
     <section className="auth-mode-bar">
-      <h3 className="auth-title">{UI_TEXT.title}</h3>
+      <h3 className="auth-title">{widgetSession ? UI_TEXT.accountTitle : UI_TEXT.title}</h3>
 
       {widgetSession ? (
-        <div className="auth-session">
-          <p className="meta">
-            {UI_TEXT.loggedInAsPrefix}{' '}
-            <strong>{widgetSession.user.email || widgetSession.user.username}</strong> (id: {widgetSession.user.id})
-          </p>
-          <div className="form-actions">
+        <div className="auth-session auth-account-card">
+          <div className="auth-account-summary">
+            <p className="meta auth-account-label">
+              {UI_TEXT.loggedInAsPrefix}
+            </p>
+            <p className="auth-account-name">{getDisplayName(widgetSession)}</p>
+            {widgetSession.user.email ? (
+              <p className="auth-account-email">
+                {UI_TEXT.emailLabel}: {widgetSession.user.email}
+              </p>
+            ) : null}
+          </div>
+
+          <div className="form-actions auth-account-actions">
             <button
               type="button"
-              className="primary-button"
-              onClick={() => void applyWidgetSession(widgetSession)}
-              disabled={authLoading}
+              className="secondary-button account-logout-button"
+              onClick={onLogout}
             >
-              {authLoading ? UI_TEXT.refreshActorTokenLoading : UI_TEXT.refreshActorToken}
-            </button>
-            <button type="button" className="inline-button" onClick={onLogout}>
               {UI_TEXT.logout}
             </button>
           </div>
@@ -479,7 +494,11 @@ export const WidgetInternalAuthPanel = () => {
                         />
                       </label>
                       <div className="form-actions">
-                        <button type="submit" className="primary-button" disabled={passwordResetLoading}>
+                        <button
+                          type="submit"
+                          className="primary-button"
+                          disabled={passwordResetLoading}
+                        >
                           {passwordResetLoading ? UI_TEXT.sendEmailLoading : UI_TEXT.sendEmail}
                         </button>
                         <button
@@ -508,8 +527,8 @@ export const WidgetInternalAuthPanel = () => {
                         <span>{UI_TEXT.newPassword}</span>
                         <input
                           type="password"
-                          value={resetPassword}
-                          onChange={(event) => setResetPassword(event.target.value)}
+                          value={resetPasswordValue}
+                          onChange={(event) => setResetPasswordValue(event.target.value)}
                           autoComplete="new-password"
                           required
                         />
@@ -525,8 +544,14 @@ export const WidgetInternalAuthPanel = () => {
                         />
                       </label>
                       <div className="form-actions">
-                        <button type="submit" className="primary-button" disabled={passwordResetLoading}>
-                          {passwordResetLoading ? UI_TEXT.resetPasswordLoading : UI_TEXT.resetPassword}
+                        <button
+                          type="submit"
+                          className="primary-button"
+                          disabled={passwordResetLoading}
+                        >
+                          {passwordResetLoading
+                            ? UI_TEXT.resetPasswordLoading
+                            : UI_TEXT.resetPassword}
                         </button>
                         <button
                           type="button"
@@ -604,7 +629,9 @@ export const WidgetInternalAuthPanel = () => {
                 onClick={() => void onResendConfirmation()}
                 disabled={isResendingConfirmation}
               >
-                {isResendingConfirmation ? UI_TEXT.resendConfirmationLoading : UI_TEXT.resendConfirmation}
+                {isResendingConfirmation
+                  ? UI_TEXT.resendConfirmationLoading
+                  : UI_TEXT.resendConfirmation}
               </button>
             </div>
           ) : null}

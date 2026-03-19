@@ -502,6 +502,9 @@ export interface ApiIdeaIdea extends Struct.CollectionTypeSchema {
         maxLength: 3000;
         minLength: 3;
       }>;
+    isHidden: Schema.Attribute.Boolean &
+      Schema.Attribute.Required &
+      Schema.Attribute.DefaultTo<false>;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<'oneToMany', 'api::idea.idea'> &
       Schema.Attribute.Private;
@@ -620,6 +623,9 @@ export interface ApiRoadmapItemRoadmapItem extends Struct.CollectionTypeSchema {
         maxLength: 2000;
         minLength: 3;
       }>;
+    isHidden: Schema.Attribute.Boolean &
+      Schema.Attribute.Required &
+      Schema.Attribute.DefaultTo<false>;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<
       'oneToMany',

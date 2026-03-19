@@ -177,8 +177,8 @@ $roadmapResp = Invoke-JsonRequest -Method 'GET' -Url "$BaseUrl/api/public/roadma
 Ensure-Status -Name 'GET /api/public/roadmap' -Actual $roadmapResp.StatusCode -Expected 200
 Ensure-True -Name 'Roadmap payload' -Condition ($null -ne $roadmapResp.Json -and $null -ne $roadmapResp.Json.data) -ErrorMessage 'is missing data array'
 
-$ideasResp = Invoke-JsonRequest -Method 'GET' -Url "$BaseUrl/api/public/ideas?sort=top"
-Ensure-Status -Name 'GET /api/public/ideas?sort=top' -Actual $ideasResp.StatusCode -Expected 200
+$ideasResp = Invoke-JsonRequest -Method 'GET' -Url "$BaseUrl/api/public/ideas?sort=latest"
+Ensure-Status -Name 'GET /api/public/ideas?sort=latest' -Actual $ideasResp.StatusCode -Expected 200
 Ensure-True -Name 'Ideas payload' -Condition ($null -ne $ideasResp.Json -and $null -ne $ideasResp.Json.data) -ErrorMessage 'is missing data array'
 
 $suffix = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
@@ -339,12 +339,12 @@ if ($ManagerJwt) {
   Ensure-Status -Name 'PATCH /api/manager/ideas/:id/status' -Actual $managerIdeaStatusResp.StatusCode -Expected 200
   Ensure-True -Name 'Updated idea status' -Condition ($managerIdeaStatusResp.Json.data.status -eq 'under_review') -ErrorMessage "expected under_review, got '$($managerIdeaStatusResp.Json.data.status)'"
 
-  $managerCommentsResp = Invoke-JsonRequest -Method 'GET' -Url "$BaseUrl/api/manager/comments?target=idea&isHidden=false" -Headers $managerHeaders
-  Ensure-Status -Name 'GET /api/manager/comments?target=idea&isHidden=false' -Actual $managerCommentsResp.StatusCode -Expected 200
+  $managerIdeaDetailsResp = Invoke-JsonRequest -Method 'GET' -Url "$BaseUrl/api/manager/ideas/$ideaId" -Headers $managerHeaders
+  Ensure-Status -Name 'GET /api/manager/ideas/:id' -Actual $managerIdeaDetailsResp.StatusCode -Expected 200
 
-  $managerCommentIds = @($managerCommentsResp.Json.data | ForEach-Object { $_.id })
-  $hasManagerComment = $managerCommentIds -contains $commentId
-  Ensure-True -Name 'Manager comments visibility' -Condition $hasManagerComment -ErrorMessage "does not include comment id=$commentId"
+  $managerIdeaCommentIds = @($managerIdeaDetailsResp.Json.data.comments | ForEach-Object { $_.id })
+  $hasManagerComment = $managerIdeaCommentIds -contains $commentId
+  Ensure-True -Name 'Manager idea details comments' -Condition $hasManagerComment -ErrorMessage "does not include comment id=$commentId"
 
   $managerHideCommentPayload = @{ isHidden = $true } | ConvertTo-Json -Compress
   $managerHideCommentResp = Invoke-JsonRequest -Method 'PATCH' -Url "$BaseUrl/api/manager/comments/idea/$commentId/moderate" -BodyJson $managerHideCommentPayload -Headers $managerHeaders

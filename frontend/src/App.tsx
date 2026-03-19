@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import './App.css';
 import { AppRoutes } from './app/AppRoutes';
@@ -9,28 +9,15 @@ import { PUBLIC_WRITE_AUTH_REQUIRED_EVENT } from './lib/api';
 import { getUserFingerprint } from './lib/fingerprint';
 import { isManagerEmailAllowed } from './lib/manager-access';
 import { getWidgetAuthSession } from './lib/widget-auth-api';
-import {
-  PUBLIC_WRITE_AUTH_UPDATED_EVENT,
-  getPublicWriteAuthMode,
-  type PublicWriteAuthMode,
-} from './lib/write-auth';
+import { PUBLIC_WRITE_AUTH_UPDATED_EVENT, getPublicWriteAuthMode } from './lib/write-auth';
 
-const PUBLIC_WRITE_MODE: PublicWriteAuthMode = getPublicWriteAuthMode();
+const PUBLIC_WRITE_MODE = getPublicWriteAuthMode();
 const WIDGET_INTERNAL_AUTH_ENABLED =
   String(import.meta.env.VITE_WIDGET_INTERNAL_AUTH_ENABLED ?? 'true').trim().toLowerCase() !==
   'false';
 
-const WRITE_MODE_LABEL: Record<PublicWriteAuthMode, string> = {
-  demo: 'демо',
-  hybrid: 'гибрид',
-  auth: 'авторизация',
-};
-
 const UI_TEXT = {
-  title: 'Публичный roadmap и идеи',
-  fingerprintPrefix:
-    'Отпечаток пользователя (демо):',
-  writeModePrefix: 'Режим записи:',
+  appTitle: 'Roadmap и идеи',
   authOpen: 'Вход',
   account: 'Аккаунт',
   authModalTitle: 'Вход и регистрация',
@@ -111,48 +98,48 @@ function App() {
 
   return (
     <main className="app">
-      <header className="app-header">
-        <div className="app-header-top">
-          <div>
-            <h1>{UI_TEXT.title}</h1>
-            <p>
-              {UI_TEXT.fingerprintPrefix} {fingerprint.slice(-12)}
-            </p>
-            <p>
-              {UI_TEXT.writeModePrefix} {WRITE_MODE_LABEL[PUBLIC_WRITE_MODE]}
-            </p>
+      <header className="app-header app-header-shell">
+        <div className="app-shell-bar">
+          <div className="app-brand">
+            <h1>{UI_TEXT.appTitle}</h1>
           </div>
 
-          {hasAuthModal ? (
-            <div className="app-header-actions">
+          <nav className="tabs app-main-nav">
+            <NavLink
+              to="/roadmap"
+              className={({ isActive }) => (isActive ? 'tab tab-active' : 'tab')}
+            >
+              Roadmap
+            </NavLink>
+            <NavLink
+              to="/ideas"
+              className={({ isActive }) => (isActive ? 'tab tab-active' : 'tab')}
+            >
+              {UI_TEXT.ideas}
+            </NavLink>
+            {isManagerAllowed ? (
+              <NavLink
+                to="/manager"
+                className={({ isActive }) => (isActive ? 'tab tab-active' : 'tab')}
+              >
+                {UI_TEXT.manager}
+              </NavLink>
+            ) : null}
+          </nav>
+
+          <div className="app-header-actions">
+            {hasAuthModal ? (
               <button
                 type="button"
-                className="primary-button"
+                className="primary-button app-account-button"
                 onClick={() => setIsAuthModalOpen(true)}
               >
                 {authButtonLabel}
               </button>
-            </div>
-          ) : null}
+            ) : null}
+          </div>
         </div>
       </header>
-
-      <nav className="tabs">
-        <NavLink to="/roadmap" className={({ isActive }) => (isActive ? 'tab tab-active' : 'tab')}>
-          roadmap
-        </NavLink>
-        <NavLink to="/ideas" className={({ isActive }) => (isActive ? 'tab tab-active' : 'tab')}>
-          {UI_TEXT.ideas}
-        </NavLink>
-        {isManagerAllowed ? (
-          <NavLink
-            to="/manager"
-            className={({ isActive }) => (isActive ? 'tab tab-active' : 'tab')}
-          >
-            {UI_TEXT.manager}
-          </NavLink>
-        ) : null}
-      </nav>
 
       <AppRoutes userFingerprint={fingerprint} isManagerAllowed={isManagerAllowed} />
 
@@ -177,9 +164,7 @@ function App() {
               </button>
             </div>
 
-            {WIDGET_INTERNAL_AUTH_ENABLED ? (
-              <WidgetInternalAuthPanel />
-            ) : null}
+            {WIDGET_INTERNAL_AUTH_ENABLED ? <WidgetInternalAuthPanel /> : null}
 
             {shouldShowManualActorControls ? (
               <ExternalAuthPanel

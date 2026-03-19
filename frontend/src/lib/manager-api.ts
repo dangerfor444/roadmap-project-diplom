@@ -1,10 +1,11 @@
-import type {
+﻿import type {
   ManagerApiEnvelope,
   ManagerCommentItem,
-  ManagerCommentsFilter,
   ManagerCommentTarget,
   ManagerCreateRoadmapInput,
+  ManagerIdeaDetails,
   ManagerIdeaItem,
+  ManagerRoadmapDetails,
   ManagerRoadmapItem,
   ManagerUpdateRoadmapInput,
 } from '../types/manager-api';
@@ -88,6 +89,13 @@ export const managerApi = {
     return response.data;
   },
 
+  async getRoadmapDetails(id: number): Promise<ManagerRoadmapDetails> {
+    const response = await managerRequest<ManagerApiEnvelope<ManagerRoadmapDetails>>(
+      `/roadmap/${id}`
+    );
+    return response.data;
+  },
+
   async createRoadmap(input: ManagerCreateRoadmapInput): Promise<ManagerRoadmapItem> {
     const response = await managerRequest<ManagerApiEnvelope<ManagerRoadmapItem>>('/roadmap', {
       method: 'POST',
@@ -107,6 +115,17 @@ export const managerApi = {
     return response.data;
   },
 
+  async updateRoadmapVisibility(id: number, isHidden: boolean): Promise<ManagerRoadmapItem> {
+    const response = await managerRequest<ManagerApiEnvelope<ManagerRoadmapItem>>(
+      `/roadmap/${id}/visibility`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify({ isHidden }),
+      }
+    );
+    return response.data;
+  },
+
   async deleteRoadmap(id: number): Promise<void> {
     await managerRequest<void>(`/roadmap/${id}`, {
       method: 'DELETE',
@@ -116,6 +135,11 @@ export const managerApi = {
   async getIdeas(status?: IdeaStatus): Promise<ManagerIdeaItem[]> {
     const query = status ? `?status=${status}` : '';
     const response = await managerRequest<ManagerApiEnvelope<ManagerIdeaItem[]>>(`/ideas${query}`);
+    return response.data;
+  },
+
+  async getIdeaDetails(id: number): Promise<ManagerIdeaDetails> {
+    const response = await managerRequest<ManagerApiEnvelope<ManagerIdeaDetails>>(`/ideas/${id}`);
     return response.data;
   },
 
@@ -130,21 +154,21 @@ export const managerApi = {
     return response.data;
   },
 
+  async updateIdeaVisibility(id: number, isHidden: boolean): Promise<ManagerIdeaItem> {
+    const response = await managerRequest<ManagerApiEnvelope<ManagerIdeaItem>>(
+      `/ideas/${id}/visibility`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify({ isHidden }),
+      }
+    );
+    return response.data;
+  },
+
   async deleteIdea(id: number): Promise<void> {
     await managerRequest<void>(`/ideas/${id}`, {
       method: 'DELETE',
     });
-  },
-
-  async getComments(filter: ManagerCommentsFilter): Promise<ManagerCommentItem[]> {
-    const search = new URLSearchParams();
-    if (filter.target) search.set('target', filter.target);
-    if (typeof filter.isHidden === 'boolean') search.set('isHidden', String(filter.isHidden));
-    const suffix = search.size > 0 ? `?${search.toString()}` : '';
-    const response = await managerRequest<ManagerApiEnvelope<ManagerCommentItem[]>>(
-      `/comments${suffix}`
-    );
-    return response.data;
   },
 
   async moderateComment(

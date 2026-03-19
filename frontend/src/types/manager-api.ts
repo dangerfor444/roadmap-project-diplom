@@ -11,6 +11,7 @@ export interface ManagerRoadmapItem {
   category: string | null;
   votesCount: number;
   commentsCount: number;
+  isHidden: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -22,6 +23,9 @@ export interface ManagerIdeaItem {
   description: string;
   status: IdeaStatus;
   votesCount: number;
+  commentsCount: number;
+  authorName: string;
+  isHidden: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -41,6 +45,14 @@ export interface ManagerCommentItem {
   updatedAt: string;
 }
 
+export interface ManagerRoadmapDetails extends ManagerRoadmapItem {
+  comments: ManagerCommentItem[];
+}
+
+export interface ManagerIdeaDetails extends ManagerIdeaItem {
+  comments: ManagerCommentItem[];
+}
+
 export interface ManagerCreateRoadmapInput {
   title: string;
   description: string;
@@ -53,11 +65,6 @@ export interface ManagerUpdateRoadmapInput {
   description?: string;
   status?: RoadmapStatus;
   category?: string | null;
-}
-
-export interface ManagerCommentsFilter {
-  target?: ManagerCommentTarget;
-  isHidden?: boolean;
 }
 
 export interface ManagerApiEnvelope<T> {

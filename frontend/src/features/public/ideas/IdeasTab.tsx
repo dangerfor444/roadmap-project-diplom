@@ -1,4 +1,4 @@
-import type { FormEvent } from 'react';
+﻿import type { FormEvent } from 'react';
 import { useEffect, useState } from 'react';
 import { ApiError, isAuthRequiredError, publicApi } from '../../../lib/api';
 import type { IdeaSort, IdeaSummary } from '../../../types/public-api';
@@ -6,8 +6,55 @@ import { IDEAS_SORTS, IDEA_STATUS_LABEL, formatDate } from '../../common/meta';
 import { EmptyState, ErrorState, LoadingState, errorMessage } from '../../common/ui';
 import { IdeaDetailsTab } from './IdeaDetailsTab';
 
+type IdeaViewMode = 'grid' | 'list';
+
+const GridViewIcon = () => (
+  <svg viewBox="0 0 16 16" aria-hidden="true" className="view-switch-icon">
+    <rect x="1.5" y="1.5" width="5" height="5" rx="1.2" />
+    <rect x="9.5" y="1.5" width="5" height="5" rx="1.2" />
+    <rect x="1.5" y="9.5" width="5" height="5" rx="1.2" />
+    <rect x="9.5" y="9.5" width="5" height="5" rx="1.2" />
+  </svg>
+);
+
+const ListViewIcon = () => (
+  <svg viewBox="0 0 16 16" aria-hidden="true" className="view-switch-icon">
+    <rect x="2" y="3" width="12" height="2" rx="1" />
+    <rect x="2" y="7" width="12" height="2" rx="1" />
+    <rect x="2" y="11" width="12" height="2" rx="1" />
+  </svg>
+);
+
+const UI_TEXT = {
+  title: 'Идеи',
+  subtitle: 'Голосуйте, обсуждайте и предлагайте улучшения продукта.',
+  openForm: 'Предложить идею',
+  closeForm: 'Скрыть форму',
+  formTitle: 'Новая идея',
+  titleLabel: 'Заголовок',
+  descriptionLabel: 'Описание',
+  submit: 'Отправить идею',
+  submitting: 'Отправка...',
+  loadError: 'Не удалось загрузить идеи.',
+  titleError: 'Заголовок должен быть от 3 до 140 символов.',
+  descriptionError: 'Описание должно быть от 3 до 3000 символов.',
+  submitSuccess: 'Идея отправлена.',
+  submitError: 'Не удалось отправить идею.',
+  tooManyRequests: 'Слишком много запросов.',
+  retryAfterPrefix: ' Повторите через ',
+  retryAfterSuffix: ' с.',
+  empty: 'Пока нет идей.',
+  openDetails: 'Открыть детали',
+  votesLabel: 'Голосов',
+  commentsLabel: 'Комментариев',
+  authorLabel: 'Автор',
+  gridView: 'Сетка',
+  listView: 'Список',
+} as const;
+
 export const IdeasTab = ({ userFingerprint }: { userFingerprint: string }) => {
-  const [sort, setSort] = useState<IdeaSort>('top');
+  const [sort, setSort] = useState<IdeaSort>('latest');
+  const [viewMode, setViewMode] = useState<IdeaViewMode>('grid');
   const [ideas, setIdeas] = useState<IdeaSummary[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -17,6 +64,7 @@ export const IdeasTab = ({ userFingerprint }: { userFingerprint: string }) => {
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitInfo, setSubmitInfo] = useState<string | null>(null);
+  const [isIdeaFormOpen, setIsIdeaFormOpen] = useState(false);
   const [selectedIdeaId, setSelectedIdeaId] = useState<number | null>(null);
 
   const loadIdeas = async (selectedSort: IdeaSort) => {
@@ -26,7 +74,7 @@ export const IdeasTab = ({ userFingerprint }: { userFingerprint: string }) => {
       const nextIdeas = await publicApi.getIdeas(selectedSort);
       setIdeas(nextIdeas);
     } catch (requestError) {
-      setError(errorMessage(requestError, 'Не удалось загрузить идеи.'));
+      setError(errorMessage(requestError, UI_TEXT.loadError));
     } finally {
       setIsLoading(false);
     }
@@ -45,7 +93,7 @@ export const IdeasTab = ({ userFingerprint }: { userFingerprint: string }) => {
         }
       } catch (requestError) {
         if (!isCancelled) {
-          setError(errorMessage(requestError, 'Не удалось загрузить идеи.'));
+          setError(errorMessage(requestError, UI_TEXT.loadError));
         }
       } finally {
         if (!isCancelled) {
@@ -60,6 +108,16 @@ export const IdeasTab = ({ userFingerprint }: { userFingerprint: string }) => {
     };
   }, [sort]);
 
+  const toggleIdeaForm = () => {
+    setIsIdeaFormOpen((current) => !current);
+    setSubmitError(null);
+    setSubmitInfo(null);
+  };
+
+  const openIdeaDetails = (ideaId: number) => {
+    setSelectedIdeaId(ideaId);
+  };
+
   const onSubmitIdea = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setSubmitError(null);
@@ -69,12 +127,12 @@ export const IdeasTab = ({ userFingerprint }: { userFingerprint: string }) => {
     const safeDescription = description.trim();
 
     if (safeTitle.length < 3 || safeTitle.length > 140) {
-      setSubmitError('Заголовок должен быть от 3 до 140 символов.');
+      setSubmitError(UI_TEXT.titleError);
       return;
     }
 
     if (safeDescription.length < 3 || safeDescription.length > 3000) {
-      setSubmitError('Описание должно быть от 3 до 3000 символов.');
+      setSubmitError(UI_TEXT.descriptionError);
       return;
     }
 
@@ -88,9 +146,9 @@ export const IdeasTab = ({ userFingerprint }: { userFingerprint: string }) => {
 
       setTitle('');
       setDescription('');
-      setSubmitInfo('Идея отправлена.');
+      setSubmitInfo(UI_TEXT.submitSuccess);
 
-      if (sort === 'new') {
+      if (sort === 'latest') {
         setIdeas((current) => [createdIdea, ...current]);
       } else {
         await loadIdeas(sort);
@@ -103,11 +161,11 @@ export const IdeasTab = ({ userFingerprint }: { userFingerprint: string }) => {
       if (requestError instanceof ApiError && requestError.status === 429) {
         const retryHint =
           requestError.retryAfterSeconds !== null
-            ? ` Повторите через ${requestError.retryAfterSeconds} с.`
+            ? `${UI_TEXT.retryAfterPrefix}${requestError.retryAfterSeconds}${UI_TEXT.retryAfterSuffix}`
             : '';
-        setSubmitError(`Слишком много запросов.${retryHint}`);
+        setSubmitError(`${UI_TEXT.tooManyRequests}${retryHint}`);
       } else {
-        setSubmitError(errorMessage(requestError, 'Не удалось отправить идею.'));
+        setSubmitError(errorMessage(requestError, UI_TEXT.submitError));
       }
     } finally {
       setIsSubmitting(false);
@@ -116,84 +174,150 @@ export const IdeasTab = ({ userFingerprint }: { userFingerprint: string }) => {
 
   return (
     <section className="tab-content">
-      <h2>Идеи</h2>
+      <div className="section-header">
+        <div className="page-hero">
+          <h2>{UI_TEXT.title}</h2>
+          <p className="meta">{UI_TEXT.subtitle}</p>
+        </div>
+        <button type="button" className="primary-button" onClick={toggleIdeaForm}>
+          {isIdeaFormOpen ? UI_TEXT.closeForm : UI_TEXT.openForm}
+        </button>
+      </div>
 
-      <article className="card form-card">
-        <h3>Предложить идею</h3>
-        <form className="form-grid" onSubmit={onSubmitIdea}>
-          <label className="field">
-            <span>Заголовок</span>
-            <input
-              value={title}
-              onChange={(event) => setTitle(event.target.value)}
-              minLength={3}
-              maxLength={140}
-              required
-            />
-          </label>
+      {isIdeaFormOpen ? (
+        <article className="card form-card form-card-collapsible">
+          <h3>{UI_TEXT.formTitle}</h3>
+          <form className="form-grid" onSubmit={onSubmitIdea}>
+            <label className="field">
+              <span>{UI_TEXT.titleLabel}</span>
+              <input
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
+                minLength={3}
+                maxLength={140}
+                required
+              />
+            </label>
 
-          <label className="field">
-            <span>Описание</span>
-            <textarea
-              value={description}
-              onChange={(event) => setDescription(event.target.value)}
-              minLength={3}
-              maxLength={3000}
-              rows={4}
-              required
-            />
-          </label>
+            <label className="field">
+              <span>{UI_TEXT.descriptionLabel}</span>
+              <textarea
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+                minLength={3}
+                maxLength={3000}
+                rows={4}
+                required
+              />
+            </label>
 
-          <div className="form-actions">
-            <button type="submit" className="primary-button" disabled={isSubmitting}>
-              {isSubmitting ? 'Отправка...' : 'Отправить идею'}
+            <div className="form-actions">
+              <button type="submit" className="primary-button" disabled={isSubmitting}>
+                {isSubmitting ? UI_TEXT.submitting : UI_TEXT.submit}
+              </button>
+              {submitInfo ? <span className="form-info">{submitInfo}</span> : null}
+            </div>
+
+            {submitError ? <ErrorState message={submitError} /> : null}
+          </form>
+        </article>
+      ) : null}
+
+      <div className="ideas-toolbar">
+        <div className="controls">
+          {IDEAS_SORTS.map((item) => (
+            <button
+              key={item.value}
+              type="button"
+              className={item.value === sort ? 'chip chip-active' : 'chip'}
+              onClick={() => setSort(item.value)}
+            >
+              {item.label}
             </button>
-            {submitInfo ? <span className="form-info">{submitInfo}</span> : null}
-          </div>
+          ))}
+        </div>
 
-          {submitError ? <ErrorState message={submitError} /> : null}
-        </form>
-      </article>
-
-      <div className="controls">
-        {IDEAS_SORTS.map((item) => (
+        <div className="view-switcher" role="tablist" aria-label="Режим отображения идей">
           <button
-            key={item.value}
             type="button"
-            className={item.value === sort ? 'chip chip-active' : 'chip'}
-            onClick={() => setSort(item.value)}
+            className={
+              viewMode === 'grid'
+                ? 'view-switch-button view-switch-button-active'
+                : 'view-switch-button'
+            }
+            onClick={() => setViewMode('grid')}
+            aria-pressed={viewMode === 'grid'}
           >
-            {item.label}
+            <GridViewIcon />
+            <span>{UI_TEXT.gridView}</span>
           </button>
-        ))}
+          <button
+            type="button"
+            className={
+              viewMode === 'list'
+                ? 'view-switch-button view-switch-button-active'
+                : 'view-switch-button'
+            }
+            onClick={() => setViewMode('list')}
+            aria-pressed={viewMode === 'list'}
+          >
+            <ListViewIcon />
+            <span>{UI_TEXT.listView}</span>
+          </button>
+        </div>
       </div>
 
       {isLoading ? <LoadingState /> : null}
       {!isLoading && error ? <ErrorState message={error} /> : null}
-      {!isLoading && !error && ideas.length === 0 ? <EmptyState message="Пока нет идей." /> : null}
+      {!isLoading && !error && ideas.length === 0 ? <EmptyState message={UI_TEXT.empty} /> : null}
 
       {!isLoading && !error && ideas.length > 0 ? (
-        <div className="cards">
+        <div className={viewMode === 'grid' ? 'idea-grid' : 'cards'}>
           {ideas.map((idea) => (
-            <article key={idea.id} className="card">
+            <article
+              key={idea.id}
+              className={
+                viewMode === 'grid'
+                  ? 'card idea-card idea-card-compact idea-card-clickable'
+                  : 'card idea-card idea-card-clickable'
+              }
+              role="button"
+              tabIndex={0}
+              onClick={() => openIdeaDetails(idea.id)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  openIdeaDetails(idea.id);
+                }
+              }}
+            >
               <header className="card-header">
                 <h3>{idea.title}</h3>
                 <span className="status">{IDEA_STATUS_LABEL[idea.status]}</span>
               </header>
 
-              <p className="description">{idea.description}</p>
-              <p className="meta">
-                Голосов: <strong>{idea.votesCount}</strong> • Комментариев:{' '}
-                <strong>{idea.commentsCount}</strong> • {formatDate(idea.createdAt)}
+              {viewMode === 'list' ? <p className="description">{idea.description}</p> : null}
+              <p className="meta idea-card-author">
+                {UI_TEXT.authorLabel}: <strong>{idea.authorName}</strong>
               </p>
+              <p className="meta idea-card-meta">
+                {UI_TEXT.votesLabel}: <strong>{idea.votesCount}</strong> • {UI_TEXT.commentsLabel}:{' '}
+                <strong>{idea.commentsCount}</strong>
+              </p>
+              <p className="meta idea-card-date">{formatDate(idea.createdAt)}</p>
 
-              <button
-                type="button"
-                className="inline-button"
-                onClick={() => setSelectedIdeaId(idea.id)}
-              >
-                Открыть детали
-              </button>
+              <div className="idea-card-actions">
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    openIdeaDetails(idea.id);
+                  }}
+                >
+                  {UI_TEXT.openDetails}
+                </button>
+              </div>
             </article>
           ))}
         </div>

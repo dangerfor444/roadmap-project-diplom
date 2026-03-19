@@ -1,7 +1,6 @@
 import { Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { ErrorState } from '../features/common/ui';
 import { ManagerIdeasPage } from '../features/manager/ManagerIdeasPage';
-import { ManagerModerationPage } from '../features/manager/ManagerModerationPage';
 import { ManagerPanelLayout } from '../features/manager/ManagerPanelLayout';
 import { ManagerRoadmapPage } from '../features/manager/ManagerRoadmapPage';
 import { IdeaDetailsTab } from '../features/public/ideas/IdeaDetailsTab';
@@ -75,7 +74,7 @@ export const AppRoutes = ({
           <Route index element={<Navigate to="/manager/roadmap" replace />} />
           <Route path="roadmap" element={<ManagerRoadmapPage />} />
           <Route path="ideas" element={<ManagerIdeasPage />} />
-          <Route path="moderation" element={<ManagerModerationPage />} />
+          <Route path="*" element={<Navigate to="/manager/roadmap" replace />} />
         </Route>
       ) : (
         <Route path="/manager/*" element={<ManagerAccessDeniedPage />} />

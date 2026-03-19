@@ -19,6 +19,15 @@ export default {
       },
     },
     {
+      method: 'GET',
+      path: '/manager/roadmap/:id',
+      handler: 'manager.getRoadmap',
+      config: {
+        auth: false,
+        middlewares: ['global::manager-api-key'],
+      },
+    },
+    {
       method: 'PUT',
       path: '/manager/roadmap/:id',
       handler: 'manager.updateRoadmap',
@@ -37,9 +46,27 @@ export default {
       },
     },
     {
+      method: 'PATCH',
+      path: '/manager/roadmap/:id/visibility',
+      handler: 'manager.updateRoadmapVisibility',
+      config: {
+        auth: false,
+        middlewares: ['global::manager-api-key'],
+      },
+    },
+    {
       method: 'GET',
       path: '/manager/ideas',
       handler: 'manager.listIdeas',
+      config: {
+        auth: false,
+        middlewares: ['global::manager-api-key'],
+      },
+    },
+    {
+      method: 'GET',
+      path: '/manager/ideas/:id',
+      handler: 'manager.getIdea',
       config: {
         auth: false,
         middlewares: ['global::manager-api-key'],
@@ -55,18 +82,18 @@ export default {
       },
     },
     {
-      method: 'DELETE',
-      path: '/manager/ideas/:id',
-      handler: 'manager.deleteIdea',
+      method: 'PATCH',
+      path: '/manager/ideas/:id/visibility',
+      handler: 'manager.updateIdeaVisibility',
       config: {
         auth: false,
         middlewares: ['global::manager-api-key'],
       },
     },
     {
-      method: 'GET',
-      path: '/manager/comments',
-      handler: 'manager.listComments',
+      method: 'DELETE',
+      path: '/manager/ideas/:id',
+      handler: 'manager.deleteIdea',
       config: {
         auth: false,
         middlewares: ['global::manager-api-key'],

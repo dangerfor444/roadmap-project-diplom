@@ -75,7 +75,7 @@ export const vote = async (ctx: Ctx): Promise<void> => {
   const { storageFingerprint } = actorResult.actor;
 
   const idea = await strapi.db.query('api::idea.idea').findOne({
-    where: { id: ideaId },
+    where: { id: ideaId, isHidden: false },
   });
 
   if (!idea) {
@@ -137,7 +137,7 @@ export const unvote = async (ctx: Ctx): Promise<void> => {
   const { storageFingerprint } = actorResult.actor;
 
   const idea = await strapi.db.query('api::idea.idea').findOne({
-    where: { id: ideaId },
+    where: { id: ideaId, isHidden: false },
   });
 
   if (!idea) {
@@ -217,7 +217,7 @@ export const comment = async (ctx: Ctx): Promise<void> => {
   const { storageFingerprint } = actorResult.actor;
 
   const idea = await strapi.db.query('api::idea.idea').findOne({
-    where: { id: ideaId },
+    where: { id: ideaId, isHidden: false },
   });
 
   if (!idea) {

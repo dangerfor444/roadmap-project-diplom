@@ -1,6 +1,6 @@
 export type RoadmapStatus = 'planned' | 'in_progress' | 'done';
 export type IdeaStatus = 'new' | 'under_review' | 'planned' | 'declined' | 'done';
-export type IdeaSort = 'top' | 'new';
+export type IdeaSort = 'popular' | 'discussed' | 'latest';
 
 export interface RoadmapItem {
   id: number;

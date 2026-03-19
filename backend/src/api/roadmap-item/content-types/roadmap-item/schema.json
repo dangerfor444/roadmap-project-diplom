@@ -23,12 +23,13 @@
       "relationOpenMode": "modal"
     },
     "layouts": {
-      "list": ["title", "status", "votesCount", "commentsCount", "category", "createdAt"],
+      "list": ["title", "status", "isHidden", "votesCount", "commentsCount", "category", "createdAt"],
       "edit": [
         [
           { "name": "title", "size": 8 },
           { "name": "status", "size": 4 }
         ],
+        [{ "name": "isHidden", "size": 4 }],
         [
           { "name": "votesCount", "size": 3 },
           { "name": "commentsCount", "size": 3 },
@@ -87,6 +88,11 @@
       "required": true,
       "default": 0,
       "min": 0
+    },
+    "isHidden": {
+      "type": "boolean",
+      "required": true,
+      "default": false
     },
     "votes": {
       "type": "relation",

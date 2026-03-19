@@ -28,7 +28,7 @@ export const roadmapVote = async (ctx: Ctx): Promise<void> => {
   const { storageFingerprint } = actorResult.actor;
 
   const roadmapItem = await strapi.db.query('api::roadmap-item.roadmap-item').findOne({
-    where: { id: roadmapItemId },
+    where: { id: roadmapItemId, isHidden: false },
   });
 
   if (!roadmapItem) {
@@ -90,7 +90,7 @@ export const roadmapUnvote = async (ctx: Ctx): Promise<void> => {
   const { storageFingerprint } = actorResult.actor;
 
   const roadmapItem = await strapi.db.query('api::roadmap-item.roadmap-item').findOne({
-    where: { id: roadmapItemId },
+    where: { id: roadmapItemId, isHidden: false },
   });
 
   if (!roadmapItem) {
@@ -173,7 +173,7 @@ export const roadmapComment = async (ctx: Ctx): Promise<void> => {
   const { storageFingerprint } = actorResult.actor;
 
   const roadmapItem = await strapi.db.query('api::roadmap-item.roadmap-item').findOne({
-    where: { id: roadmapItemId },
+    where: { id: roadmapItemId, isHidden: false },
   });
 
   if (!roadmapItem) {

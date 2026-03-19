@@ -1,0 +1,1001 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "API платформы roadmap",
+    "version": "1.0.0",
+    "description": "Документация по кастомным endpoint'ам платформы roadmap."
+  },
+  "servers": [
+    {
+      "url": "/",
+      "description": "Текущий backend origin"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Public Auth",
+      "description": "Аутентификация публичного пользователя и получение actor token для write-операций."
+    },
+    {
+      "name": "Public Read Roadmap",
+      "description": "Публичное чтение roadmap без авторизации."
+    },
+    {
+      "name": "Public Write Roadmap",
+      "description": "Лайки и комментарии roadmap. Для этих методов нужен actor token."
+    },
+    {
+      "name": "Public Read Ideas",
+      "description": "Публичное чтение списка идей и деталей идеи без авторизации."
+    },
+    {
+      "name": "Public Write Ideas",
+      "description": "Создание идей, лайки и комментарии. Для этих методов нужен actor token."
+    },
+    {
+      "name": "Manager Roadmap",
+      "description": "Управление roadmap в панели менеджера."
+    },
+    {
+      "name": "Manager Ideas",
+      "description": "Управление идеями и их статусами в панели менеджера."
+    },
+    {
+      "name": "Manager Comments",
+      "description": "Модерация и удаление комментариев в панели менеджера."
+    }
+  ],
+  "paths": {
+    "/api/public/auth/actor-token": {
+      "post": {
+        "tags": [
+          "Public Auth"
+        ],
+        "summary": "Выдать actor token",
+        "description": "Требует обычный Strapi JWT в заголовке Authorization: Bearer <token>.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Actor token выдан",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "default": {
+                    "value": {
+                      "data": {
+                        "actorId": "user:5",
+                        "actorToken": "payload.signature",
+                        "exp": 1774000000,
+                        "user": {
+                          "id": 5,
+                          "username": "maksim",
+                          "email": "user@example.com"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/api/public/roadmap": {
+      "get": {
+        "tags": [
+          "Public Read Roadmap"
+        ],
+        "summary": "Получить элементы roadmap",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "planned",
+                "in_progress",
+                "done"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/ListResponse"
+          }
+        }
+      }
+    },
+    "/api/public/roadmap/{id}": {
+      "get": {
+        "tags": [
+          "Public Read Roadmap"
+        ],
+        "summary": "Получить детали элемента roadmap",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdPathParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/ObjectResponse"
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/api/public/roadmap/{id}/vote": {
+      "post": {
+        "tags": [
+          "Public Write Roadmap"
+        ],
+        "summary": "Поставить лайк элементу roadmap",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdPathParam"
+          },
+          {
+            "$ref": "#/components/parameters/ActorIdHeader"
+          },
+          {
+            "$ref": "#/components/parameters/ActorTokenHeader"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/WriteIdentityBody"
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/VoteResponse"
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse"
+          },
+          "409": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Public Write Roadmap"
+        ],
+        "summary": "Убрать лайк у элемента roadmap",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdPathParam"
+          },
+          {
+            "$ref": "#/components/parameters/ActorIdHeader"
+          },
+          {
+            "$ref": "#/components/parameters/ActorTokenHeader"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/WriteIdentityBody"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/VoteResponse"
+          }
+        }
+      }
+    },
+    "/api/public/roadmap/{id}/comments": {
+      "post": {
+        "tags": [
+          "Public Write Roadmap"
+        ],
+        "summary": "Создать комментарий к roadmap",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdPathParam"
+          },
+          {
+            "$ref": "#/components/parameters/ActorIdHeader"
+          },
+          {
+            "$ref": "#/components/parameters/ActorTokenHeader"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/CommentBody"
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/ObjectResponse"
+          }
+        }
+      }
+    },
+    "/api/public/ideas": {
+      "get": {
+        "tags": [
+          "Public Read Ideas"
+        ],
+        "summary": "Получить список идей",
+        "parameters": [
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "top",
+                "new"
+              ],
+              "default": "top"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/ListResponse"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Public Write Ideas"
+        ],
+        "summary": "Создать идею",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ActorIdHeader"
+          },
+          {
+            "$ref": "#/components/parameters/ActorTokenHeader"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/CreateIdeaBody"
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/ObjectResponse"
+          }
+        }
+      }
+    },
+    "/api/public/ideas/{id}": {
+      "get": {
+        "tags": [
+          "Public Read Ideas"
+        ],
+        "summary": "Получить детали идеи",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdPathParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/ObjectResponse"
+          }
+        }
+      }
+    },
+    "/api/public/ideas/{id}/vote": {
+      "post": {
+        "tags": [
+          "Public Write Ideas"
+        ],
+        "summary": "Поставить лайк идее",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdPathParam"
+          },
+          {
+            "$ref": "#/components/parameters/ActorIdHeader"
+          },
+          {
+            "$ref": "#/components/parameters/ActorTokenHeader"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/WriteIdentityBody"
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/VoteResponse"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Public Write Ideas"
+        ],
+        "summary": "Убрать лайк у идеи",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdPathParam"
+          },
+          {
+            "$ref": "#/components/parameters/ActorIdHeader"
+          },
+          {
+            "$ref": "#/components/parameters/ActorTokenHeader"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/WriteIdentityBody"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/VoteResponse"
+          }
+        }
+      }
+    },
+    "/api/public/ideas/{id}/comments": {
+      "post": {
+        "tags": [
+          "Public Write Ideas"
+        ],
+        "summary": "Создать комментарий к идее",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdPathParam"
+          },
+          {
+            "$ref": "#/components/parameters/ActorIdHeader"
+          },
+          {
+            "$ref": "#/components/parameters/ActorTokenHeader"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/CommentBody"
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/ObjectResponse"
+          }
+        }
+      }
+    },
+    "/api/manager/roadmap": {
+      "get": {
+        "tags": [
+          "Manager Roadmap"
+        ],
+        "summary": "Получить roadmap для панели менеджера",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/ListResponse"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Manager Roadmap"
+        ],
+        "summary": "Создать элемент roadmap",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/ManagerRoadmapBody"
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/ObjectResponse"
+          }
+        }
+      }
+    },
+    "/api/manager/roadmap/{id}": {
+      "get": {
+        "tags": [
+          "Manager Roadmap"
+        ],
+        "summary": "\u041f\u043e\u043b\u0443\u0447\u0438\u0442\u044c \u0434\u0435\u0442\u0430\u043b\u0438 \u044d\u043b\u0435\u043c\u0435\u043d\u0442\u0430 roadmap",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdPathParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/ObjectResponse"
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Manager Roadmap"
+        ],
+        "summary": "Обновить элемент roadmap",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdPathParam"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/ManagerRoadmapBody"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/ObjectResponse"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Manager Roadmap"
+        ],
+        "summary": "Удалить элемент roadmap",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdPathParam"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Удалено"
+          }
+        }
+      }
+    },
+    "/api/manager/ideas": {
+      "get": {
+        "tags": [
+          "Manager Ideas"
+        ],
+        "summary": "Получить идеи для панели менеджера",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "new",
+                "under_review",
+                "planned",
+                "declined",
+                "done"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/ListResponse"
+          }
+        }
+      }
+    },
+    "/api/manager/ideas/{id}/status": {
+      "patch": {
+        "tags": [
+          "Manager Ideas"
+        ],
+        "summary": "Обновить статус идеи",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdPathParam"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/IdeaStatusBody"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/ObjectResponse"
+          }
+        }
+      }
+    },
+    "/api/manager/ideas/{id}": {
+      "get": {
+        "tags": [
+          "Manager Ideas"
+        ],
+        "summary": "\u041f\u043e\u043b\u0443\u0447\u0438\u0442\u044c \u0434\u0435\u0442\u0430\u043b\u0438 \u0438\u0434\u0435\u0438",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdPathParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/ObjectResponse"
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Manager Ideas"
+        ],
+        "summary": "Удалить идею",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdPathParam"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Удалено"
+          }
+        }
+      }
+    },
+    "/api/manager/comments/{target}/{id}/moderate": {
+      "patch": {
+        "tags": [
+          "Manager Comments"
+        ],
+        "summary": "Скрыть или показать комментарий",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CommentTargetPathParam"
+          },
+          {
+            "$ref": "#/components/parameters/IdPathParam"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/ModerateCommentBody"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/ObjectResponse"
+          }
+        }
+      }
+    },
+    "/api/manager/comments/{target}/{id}": {
+      "delete": {
+        "tags": [
+          "Manager Comments"
+        ],
+        "summary": "Удалить комментарий",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CommentTargetPathParam"
+          },
+          {
+            "$ref": "#/components/parameters/IdPathParam"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Удалено"
+          }
+        }
+      }
+    },
+    "/api/manager/roadmap/{id}/visibility": {
+      "patch": {
+        "tags": [
+          "Manager Roadmap"
+        ],
+        "summary": "Скрыть или показать элемент roadmap",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdPathParam"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/VisibilityBody"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/ObjectResponse"
+          }
+        }
+      }
+    },
+    "/api/manager/ideas/{id}/visibility": {
+      "patch": {
+        "tags": [
+          "Manager Ideas"
+        ],
+        "summary": "Скрыть или показать идею",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdPathParam"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/VisibilityBody"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/ObjectResponse"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Strapi JWT из /api/auth/local"
+      }
+    },
+    "parameters": {
+      "IdPathParam": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "CommentTargetPathParam": {
+        "name": "target",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "idea",
+            "roadmap"
+          ]
+        }
+      },
+      "ActorIdHeader": {
+        "name": "x-actor-id",
+        "in": "header",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "ActorTokenHeader": {
+        "name": "x-actor-token",
+        "in": "header",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      }
+    },
+    "requestBodies": {
+      "WriteIdentityBody": {
+        "required": false,
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "userFingerprint": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "CommentBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": [
+                "text"
+              ],
+              "properties": {
+                "text": {
+                  "type": "string"
+                },
+                "userFingerprint": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "CreateIdeaBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": [
+                "title",
+                "description"
+              ],
+              "properties": {
+                "title": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "userFingerprint": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "ManagerRoadmapBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "planned",
+                    "in_progress",
+                    "done"
+                  ]
+                },
+                "category": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "IdeaStatusBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "new",
+                    "under_review",
+                    "planned",
+                    "declined",
+                    "done"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "ModerateCommentBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": [
+                "isHidden"
+              ],
+              "properties": {
+                "isHidden": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        }
+      },
+      "VisibilityBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": [
+                "isHidden"
+              ],
+              "properties": {
+                "isHidden": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "responses": {
+      "ErrorResponse": {
+        "description": "Ошибка API",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            }
+          }
+        }
+      },
+      "ListResponse": {
+        "description": "Ответ со списком",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ListEnvelope"
+            }
+          }
+        }
+      },
+      "ObjectResponse": {
+        "description": "Ответ с объектом",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ObjectEnvelope"
+            }
+          }
+        }
+      },
+      "VoteResponse": {
+        "description": "Ответ по лайку",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/VoteEnvelope"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "ErrorEnvelope": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "ListEnvelope": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        }
+      },
+      "ObjectEnvelope": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "VoteEnvelope": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "ideaId": {
+                "type": "integer"
+              },
+              "roadmapItemId": {
+                "type": "integer"
+              },
+              "votesCount": {
+                "type": "integer"
+              },
+              "voted": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -271,12 +271,16 @@ Manager-endpoints защищены авторизацией пользовате
 Доступные маршруты:
 - `GET /manager/roadmap`
 - `POST /manager/roadmap`
+- `GET /manager/roadmap/:id`
 - `PUT /manager/roadmap/:id`
 - `DELETE /manager/roadmap/:id`
+- `PATCH /manager/roadmap/:id/visibility`
 - `GET /manager/ideas`
+- `GET /manager/ideas/:id`
 - `PATCH /manager/ideas/:id/status`
-- `GET /manager/comments?target=idea|roadmap&isHidden=true|false`
+- `PATCH /manager/ideas/:id/visibility`
 - `PATCH /manager/comments/:target/:id/moderate`
+- `DELETE /manager/comments/:target/:id`
 
 PowerShell пример:
 ```powershell
@@ -362,15 +366,30 @@ Public write-endpoints (`/api/public/ideas`, `/vote`, `/comments`, roadmap vote/
 Rate-limit для public write также учитывает actor identity (`x-actor-id` / `x-user-id`) и только затем fallback на `userFingerprint`.
 
 ## Seed для демо
+Платформу можно быстро наполнить демонстрационными данными без очистки текущей базы. Скрипт работает в режиме `append-only`: уже существующие demo-записи не дублируются, а demo-пользователи при повторном запуске просто приводятся к ожидаемому состоянию.
+
 ```powershell
 cd backend
-$env:SEED_MVP_DATA='true'
-npm run develop
+npm run seed:demo
 ```
 
-После первого запуска:
+Что создаётся:
+- 5 demo-пользователей
+- roadmap-элементы в статусах `planned / in_progress / done`
+- идеи пользователей в разных статусах
+- лайки и комментарии к идеям и roadmap
+
+Демо-аккаунты:
+- `anna.demo@roadmap.test / Demo12345!`
+- `nikita.demo@roadmap.test / Demo12345!`
+- `olga.demo@roadmap.test / Demo12345!`
+- `sergey.demo@roadmap.test / Demo12345!`
+- `maria.demo@roadmap.test / Demo12345!`
+
+Если скрипт сообщает, что не найден `backend/dist`, сначала выполните:
 ```powershell
-Remove-Item Env:SEED_MVP_DATA
+cd backend
+npm run build
 ```
 
 ## Prod-like демо

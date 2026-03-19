@@ -1,10 +1,35 @@
-import type { FormEvent } from 'react';
+﻿import type { FormEvent } from 'react';
 import { useEffect, useState } from 'react';
 import { ApiError, isAuthRequiredError, publicApi } from '../../../lib/api';
 import { getWriteStorageIdentity } from '../../../lib/write-auth';
 import type { IdeaDetails } from '../../../types/public-api';
 import { IDEA_STATUS_LABEL, formatDate } from '../../common/meta';
 import { EmptyState, ErrorState, LoadingState, errorMessage } from '../../common/ui';
+
+const UI_TEXT = {
+  title: 'Идея',
+  subtitle: 'Голосование и обсуждение предложения пользователя.',
+  back: 'Вернуться к идеям',
+  loadError: 'Не удалось загрузить детали идеи.',
+  author: 'Автор',
+  votes: 'Лайков',
+  comments: 'Комментариев',
+  createdAt: 'Создано',
+  likeAria: 'Поставить лайк',
+  unlikeAria: 'Убрать лайк',
+  tooManyRequests: 'Слишком много запросов.',
+  retryAfterPrefix: ' Повторите через ',
+  retryAfterSuffix: ' с.',
+  voteError: 'Не удалось обновить лайк.',
+  commentLengthError: 'Комментарий должен быть от 1 до 2000 символов.',
+  commentSuccess: 'Комментарий добавлен.',
+  commentError: 'Не удалось добавить комментарий.',
+  commentsTitle: 'Комментарии',
+  emptyComments: 'Комментариев пока нет.',
+  addComment: 'Добавить комментарий',
+  sendComment: 'Отправить комментарий',
+  sending: 'Отправка...',
+} as const;
 
 export const IdeaDetailsTab = ({
   ideaId,
@@ -50,7 +75,7 @@ export const IdeaDetailsTab = ({
         }
       } catch (requestError) {
         if (!isCancelled) {
-          setError(errorMessage(requestError, 'Не удалось загрузить детали идеи.'));
+          setError(errorMessage(requestError, UI_TEXT.loadError));
         }
       } finally {
         if (!isCancelled) {
@@ -96,11 +121,11 @@ export const IdeaDetailsTab = ({
       } else if (requestError instanceof ApiError && requestError.status === 429) {
         const retryHint =
           requestError.retryAfterSeconds !== null
-            ? ` Повторите через ${requestError.retryAfterSeconds} с.`
+            ? `${UI_TEXT.retryAfterPrefix}${requestError.retryAfterSeconds}${UI_TEXT.retryAfterSuffix}`
             : '';
-        setVoteError(`Слишком много запросов.${retryHint}`);
+        setVoteError(`${UI_TEXT.tooManyRequests}${retryHint}`);
       } else {
-        setVoteError(errorMessage(requestError, 'Не удалось обновить лайк.'));
+        setVoteError(errorMessage(requestError, UI_TEXT.voteError));
       }
     } finally {
       setIsVoting(false);
@@ -114,7 +139,7 @@ export const IdeaDetailsTab = ({
 
     const safeText = commentText.trim();
     if (safeText.length < 1 || safeText.length > 2000) {
-      setCommentError('Комментарий должен быть от 1 до 2000 символов.');
+      setCommentError(UI_TEXT.commentLengthError);
       return;
     }
 
@@ -126,11 +151,12 @@ export const IdeaDetailsTab = ({
       });
 
       setCommentText('');
-      setCommentInfo('Комментарий добавлен.');
+      setCommentInfo(UI_TEXT.commentSuccess);
       setIdea((current) =>
         current
           ? {
               ...current,
+              commentsCount: current.commentsCount + 1,
               comments: [...current.comments, newComment],
             }
           : current
@@ -143,11 +169,11 @@ export const IdeaDetailsTab = ({
       if (requestError instanceof ApiError && requestError.status === 429) {
         const retryHint =
           requestError.retryAfterSeconds !== null
-            ? ` Повторите через ${requestError.retryAfterSeconds} с.`
+            ? `${UI_TEXT.retryAfterPrefix}${requestError.retryAfterSeconds}${UI_TEXT.retryAfterSuffix}`
             : '';
-        setCommentError(`Слишком много запросов.${retryHint}`);
+        setCommentError(`${UI_TEXT.tooManyRequests}${retryHint}`);
       } else {
-        setCommentError(errorMessage(requestError, 'Не удалось добавить комментарий.'));
+        setCommentError(errorMessage(requestError, UI_TEXT.commentError));
       }
     } finally {
       setIsCommentSubmitting(false);
@@ -156,10 +182,15 @@ export const IdeaDetailsTab = ({
 
   return (
     <section className="tab-content">
-      <h2>Детали идеи</h2>
-      <button type="button" className="inline-button" onClick={onBack}>
-        Назад к списку идей
-      </button>
+      <div className="section-header detail-header">
+        <div className="page-hero">
+          <h2>{UI_TEXT.title}</h2>
+          <p className="meta">{UI_TEXT.subtitle}</p>
+        </div>
+        <button type="button" className="secondary-button" onClick={onBack}>
+          {UI_TEXT.back}
+        </button>
+      </div>
 
       {isLoading ? <LoadingState /> : null}
       {!isLoading && error ? <ErrorState message={error} /> : null}
@@ -172,12 +203,21 @@ export const IdeaDetailsTab = ({
           </header>
 
           <p className="description">{idea.description}</p>
-          <p className="meta">
-            Автор: <strong>{idea.authorName}</strong>
-          </p>
-          <p className="meta">
-            Голоса: <strong>{idea.votesCount}</strong> • {formatDate(idea.createdAt)}
-          </p>
+
+          <div className="detail-summary">
+            <p className="meta">
+              {UI_TEXT.author}: <strong>{idea.authorName}</strong>
+            </p>
+            <p className="meta">
+              {UI_TEXT.votes}: <strong>{idea.votesCount}</strong>
+            </p>
+            <p className="meta">
+              {UI_TEXT.comments}: <strong>{idea.commentsCount}</strong>
+            </p>
+            <p className="meta">
+              {UI_TEXT.createdAt}: {formatDate(idea.createdAt)}
+            </p>
+          </div>
 
           <div className="vote-block">
             <button
@@ -185,7 +225,7 @@ export const IdeaDetailsTab = ({
               className={alreadyVoted ? 'reaction-button reaction-button-active' : 'reaction-button'}
               onClick={onToggleVote}
               disabled={isVoting}
-              aria-label={alreadyVoted ? 'Убрать лайк' : 'Поставить лайк'}
+              aria-label={alreadyVoted ? UI_TEXT.unlikeAria : UI_TEXT.likeAria}
             >
               <span className="reaction-icon" aria-hidden="true">
                 {alreadyVoted ? '♥' : '♡'}
@@ -195,42 +235,52 @@ export const IdeaDetailsTab = ({
             {voteError ? <ErrorState message={voteError} /> : null}
           </div>
 
-          <h4>Комментарии</h4>
-          {idea.comments.length === 0 ? (
-            <EmptyState message="Комментариев пока нет." />
-          ) : (
-            <ul className="comment-list">
-              {idea.comments.map((comment) => (
-                <li key={comment.id} className="comment-item">
-                  <small className="comment-author">{comment.authorName}</small>
-                  <p>{comment.text}</p>
-                  <small>{formatDate(comment.createdAt)}</small>
-                </li>
-              ))}
-            </ul>
-          )}
-
-          <form className="form-grid compact-form" onSubmit={onSubmitComment}>
-            <label className="field">
-              <span>Добавить комментарий</span>
-              <textarea
-                value={commentText}
-                onChange={(event) => setCommentText(event.target.value)}
-                minLength={1}
-                maxLength={2000}
-                rows={3}
-                required
-              />
-            </label>
-
-            <div className="form-actions">
-              <button type="submit" className="primary-button" disabled={isCommentSubmitting}>
-                {isCommentSubmitting ? 'Отправка...' : 'Отправить комментарий'}
-              </button>
-              {commentInfo ? <span className="form-info">{commentInfo}</span> : null}
+          <section className="detail-section">
+            <div className="section-header detail-section-header">
+              <h4>{UI_TEXT.commentsTitle}</h4>
+              <p className="meta">
+                {UI_TEXT.comments}: <strong>{idea.commentsCount}</strong>
+              </p>
             </div>
-            {commentError ? <ErrorState message={commentError} /> : null}
-          </form>
+
+            {idea.comments.length === 0 ? (
+              <EmptyState message={UI_TEXT.emptyComments} />
+            ) : (
+              <ul className="comment-list">
+                {idea.comments.map((comment) => (
+                  <li key={comment.id} className="comment-item">
+                    <small className="comment-author">{comment.authorName}</small>
+                    <p>{comment.text}</p>
+                    <small>{formatDate(comment.createdAt)}</small>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <section className="detail-section">
+            <form className="form-grid compact-form" onSubmit={onSubmitComment}>
+              <label className="field">
+                <span>{UI_TEXT.addComment}</span>
+                <textarea
+                  value={commentText}
+                  onChange={(event) => setCommentText(event.target.value)}
+                  minLength={1}
+                  maxLength={2000}
+                  rows={3}
+                  required
+                />
+              </label>
+
+              <div className="form-actions">
+                <button type="submit" className="primary-button" disabled={isCommentSubmitting}>
+                  {isCommentSubmitting ? UI_TEXT.sending : UI_TEXT.sendComment}
+                </button>
+                {commentInfo ? <span className="form-info">{commentInfo}</span> : null}
+              </div>
+              {commentError ? <ErrorState message={commentError} /> : null}
+            </form>
+          </section>
         </article>
       ) : null}
     </section>

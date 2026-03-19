@@ -1,4 +1,4 @@
-export const LoadingState = () => <p className="state state-loading">Загрузка...</p>;
+﻿export const LoadingState = () => <p className="state state-loading">Загрузка...</p>;
 
 export const ErrorState = ({ message }: { message: string }) => (
   <p className="state state-error">{message}</p>

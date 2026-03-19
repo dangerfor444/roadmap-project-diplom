@@ -63,7 +63,7 @@ export const roadmap = async (ctx: Ctx): Promise<void> => {
     return;
   }
 
-  const where = status ? { status } : {};
+  const where = status ? { status, isHidden: false } : { isHidden: false };
 
   const items = await strapi.db.query('api::roadmap-item.roadmap-item').findMany({
     where,
@@ -84,7 +84,7 @@ export const roadmapItem = async (ctx: Ctx): Promise<void> => {
   }
 
   const roadmapItem = await strapi.db.query('api::roadmap-item.roadmap-item').findOne({
-    where: { id: roadmapItemId },
+    where: { id: roadmapItemId, isHidden: false },
   });
 
   if (!roadmapItem) {
@@ -115,18 +115,24 @@ export const roadmapItem = async (ctx: Ctx): Promise<void> => {
 };
 
 export const ideas = async (ctx: Ctx): Promise<void> => {
-  const sort = asString(ctx.query.sort) || 'top';
+  const requestedSort = asString(ctx.query.sort) || 'latest';
 
-  if (!IDEA_SORTS.has(sort)) {
+  if (!IDEA_SORTS.has(requestedSort)) {
     sendError(ctx, 400, 'VALIDATION_ERROR', 'Invalid ideas sort');
     return;
   }
 
-  const orderBy =
-    sort === 'new' ? [{ createdAt: 'desc' }] : [{ votesCount: 'desc' }, { createdAt: 'desc' }];
+  const sort =
+    requestedSort === 'top'
+      ? 'popular'
+      : requestedSort === 'new'
+        ? 'latest'
+        : requestedSort;
 
   const ideasData = await strapi.db.query('api::idea.idea').findMany({
-    orderBy,
+    where: {
+      isHidden: false,
+    },
   });
   const authorNameByIdeaId = await buildAuthorNameMapByIdeaId(ideasData);
   const ideaIds = ideasData
@@ -135,13 +141,29 @@ export const ideas = async (ctx: Ctx): Promise<void> => {
   const commentsCountByIdeaId = await buildVisibleIdeaCommentCountByIdeaId(ideaIds);
 
   ctx.body = {
-    data: ideasData.map((idea: any) =>
-      sanitizeIdea({
-        ...idea,
-        commentsCount: commentsCountByIdeaId.get(idea.id) ?? 0,
-        authorName: authorNameByIdeaId.get(idea.id),
-      })
-    ),
+    data: ideasData
+      .map((idea: any) =>
+        sanitizeIdea({
+          ...idea,
+          commentsCount: commentsCountByIdeaId.get(idea.id) ?? 0,
+          authorName: authorNameByIdeaId.get(idea.id),
+        })
+      )
+      .sort((left, right) => {
+        if (sort === 'discussed') {
+          const commentsDiff = right.commentsCount - left.commentsCount;
+          if (commentsDiff !== 0) {
+            return commentsDiff;
+          }
+        } else if (sort === 'popular') {
+          const votesDiff = right.votesCount - left.votesCount;
+          if (votesDiff !== 0) {
+            return votesDiff;
+          }
+        }
+
+        return new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime();
+      }),
   };
 };
 
@@ -154,7 +176,7 @@ export const idea = async (ctx: Ctx): Promise<void> => {
   }
 
   const ideaData = await strapi.db.query('api::idea.idea').findOne({
-    where: { id: ideaId },
+    where: { id: ideaId, isHidden: false },
   });
 
   if (!ideaData) {

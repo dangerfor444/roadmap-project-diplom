@@ -1,5 +1,5 @@
 export const ROADMAP_STATUSES = new Set(['planned', 'in_progress', 'done']);
-export const IDEA_SORTS = new Set(['top', 'new']);
+export const IDEA_SORTS = new Set(['popular', 'discussed', 'latest', 'top', 'new']);
 export const FINGERPRINT_PATTERN = /^[A-Za-z0-9._:-]{8,128}$/;
 export const ACTOR_ID_PATTERN = /^[A-Za-z0-9._:@-]{3,96}$/;
 export const WRITE_AUTH_MODES = new Set(['demo', 'hybrid', 'auth']);

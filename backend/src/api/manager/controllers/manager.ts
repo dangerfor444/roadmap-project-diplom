@@ -1,4 +1,8 @@
 import type { Core } from '@strapi/strapi';
+import {
+  buildAuthorNameMapByIdeaId,
+  resolveAuthorNameByFingerprint,
+} from '../../public/controllers/lib/comment-authors';
 
 declare const strapi: Core.Strapi;
 
@@ -56,14 +60,6 @@ const toPositiveIntFromUnknown = (value: unknown): number | null => {
 
   if (!Number.isInteger(parsed) || parsed <= 0) return null;
   return parsed;
-};
-
-const toOptionalBoolean = (value: string | undefined): boolean | null => {
-  if (value === undefined) return null;
-  const normalized = value.trim().toLowerCase();
-  if (normalized === 'true') return true;
-  if (normalized === 'false') return false;
-  return null;
 };
 
 const extractIdeaParentId = (comment: any): number | null => {
@@ -204,6 +200,23 @@ const resolveCommentAuthorName = async (fingerprint: unknown): Promise<string> =
     fallbackAuthorNameFromFingerprint(fingerprint);
 };
 
+const buildIdeaCommentsCountMap = async (ideaIds: number[]): Promise<Map<number, number>> => {
+  const counts = new Map<number, number>();
+
+  await Promise.all(
+    ideaIds.map(async (ideaId) => {
+      const total = await strapi.db.query('api::comment.comment').count({
+        where: {
+          idea: ideaId,
+        },
+      });
+      counts.set(ideaId, total);
+    })
+  );
+
+  return counts;
+};
+
 const normalizePlainText = (value: unknown, { multiline }: { multiline: boolean }): string => {
   const raw = asString(value);
   const withoutScripts = raw.replace(SCRIPT_OR_STYLE_REGEX, ' ');
@@ -240,6 +253,7 @@ const sanitizeRoadmap = (item: any) => ({
   category: item.category,
   votesCount: item.votesCount,
   commentsCount: item.commentsCount,
+  isHidden: item.isHidden === true,
   createdAt: item.createdAt,
   updatedAt: item.updatedAt,
 });
@@ -251,6 +265,9 @@ const sanitizeIdea = (idea: any) => ({
   description: idea.description,
   status: idea.status,
   votesCount: idea.votesCount,
+  commentsCount: toPositiveIntFromUnknown(idea.commentsCount) ?? 0,
+  authorName: asString(idea.authorName) || GUEST_AUTHOR_NAME,
+  isHidden: idea.isHidden === true,
   createdAt: idea.createdAt,
   updatedAt: idea.updatedAt,
 });
@@ -284,6 +301,48 @@ export default {
       orderBy: [{ createdAt: 'desc' }],
     });
     ctx.body = { data: items.map(sanitizeRoadmap) };
+  },
+
+  async getRoadmap(ctx: Ctx) {
+    const roadmapItemId = toPositiveInt(ctx.params.id);
+    if (!roadmapItemId) {
+      sendError(ctx, 400, 'VALIDATION_ERROR', 'Invalid roadmap item id');
+      return;
+    }
+
+    const item = await strapi.db.query('api::roadmap-item.roadmap-item').findOne({
+      where: { id: roadmapItemId },
+    });
+    if (!item) {
+      sendError(ctx, 404, 'NOT_FOUND', 'Roadmap item not found');
+      return;
+    }
+
+    const comments = await strapi.db.query('api::roadmap-comment.roadmap-comment').findMany({
+      where: {
+        roadmapItem: roadmapItemId,
+      },
+      orderBy: [{ createdAt: 'desc' }],
+    });
+    const authorNameByCommentId = await buildCommentAuthorNameMapById(comments);
+
+    ctx.body = {
+      data: {
+        ...sanitizeRoadmap(item),
+        comments: comments.map((comment: any) =>
+          sanitizeComment(
+            {
+              ...comment,
+              authorName: authorNameByCommentId.get(comment.id),
+              parentTitle: item.title,
+              parentStatus: item.status,
+              parentExists: true,
+            },
+            'roadmap'
+          )
+        ),
+      },
+    };
   },
 
   async createRoadmap(ctx: Ctx) {
@@ -324,6 +383,7 @@ export default {
         category: category || null,
         votesCount: 0,
         commentsCount: 0,
+        isHidden: false,
       },
     });
 
@@ -432,6 +492,37 @@ export default {
     ctx.body = null;
   },
 
+  async updateRoadmapVisibility(ctx: Ctx) {
+    const roadmapItemId = toPositiveInt(ctx.params.id);
+    if (!roadmapItemId) {
+      sendError(ctx, 400, 'VALIDATION_ERROR', 'Invalid roadmap item id');
+      return;
+    }
+
+    const existing = await strapi.db.query('api::roadmap-item.roadmap-item').findOne({
+      where: { id: roadmapItemId },
+    });
+    if (!existing) {
+      sendError(ctx, 404, 'NOT_FOUND', 'Roadmap item not found');
+      return;
+    }
+
+    const body = asObject(ctx.request.body);
+    if (typeof body.isHidden !== 'boolean') {
+      sendError(ctx, 400, 'VALIDATION_ERROR', 'isHidden must be boolean');
+      return;
+    }
+
+    const updated = await strapi.db.query('api::roadmap-item.roadmap-item').update({
+      where: { id: roadmapItemId },
+      data: {
+        isHidden: body.isHidden,
+      },
+    });
+
+    ctx.body = { data: sanitizeRoadmap(updated) };
+  },
+
   async listIdeas(ctx: Ctx) {
     const status = asString(ctx.query.status);
     if (status && !isValidIdeaStatus(status)) {
@@ -444,8 +535,69 @@ export default {
       where,
       orderBy: [{ createdAt: 'desc' }],
     });
+    const authorNameByIdeaId = await buildAuthorNameMapByIdeaId(ideas);
+    const ideaCommentCountById = await buildIdeaCommentsCountMap(
+      ideas
+        .map((idea: any) => toPositiveIntFromUnknown(idea.id))
+        .filter((value): value is number => value !== null)
+    );
 
-    ctx.body = { data: ideas.map(sanitizeIdea) };
+    ctx.body = {
+      data: ideas.map((idea: any) =>
+        sanitizeIdea({
+          ...idea,
+          commentsCount: ideaCommentCountById.get(idea.id) ?? 0,
+          authorName: authorNameByIdeaId.get(idea.id),
+        })
+      ),
+    };
+  },
+
+  async getIdea(ctx: Ctx) {
+    const ideaId = toPositiveInt(ctx.params.id);
+    if (!ideaId) {
+      sendError(ctx, 400, 'VALIDATION_ERROR', 'Invalid idea id');
+      return;
+    }
+
+    const idea = await strapi.db.query('api::idea.idea').findOne({
+      where: { id: ideaId },
+    });
+    if (!idea) {
+      sendError(ctx, 404, 'NOT_FOUND', 'Idea not found');
+      return;
+    }
+
+    const comments = await strapi.db.query('api::comment.comment').findMany({
+      where: {
+        idea: ideaId,
+      },
+      orderBy: [{ createdAt: 'desc' }],
+    });
+    const authorName = await resolveAuthorNameByFingerprint(idea.authorFingerprint);
+    const authorNameByCommentId = await buildCommentAuthorNameMapById(comments);
+
+    ctx.body = {
+      data: {
+        ...sanitizeIdea({
+          ...idea,
+          commentsCount: comments.length,
+          authorName,
+        }),
+        comments: comments.map((comment: any) =>
+          sanitizeComment(
+            {
+              ...comment,
+              authorName: authorNameByCommentId.get(comment.id),
+              parentTitle: idea.title,
+              parentStatus: idea.status,
+              parentExists: true,
+            },
+            'idea'
+          )
+        ),
+      },
+    };
   },
 
   async updateIdeaStatus(ctx: Ctx) {
@@ -475,7 +627,64 @@ export default {
       data: { status },
     });
 
-    ctx.body = { data: sanitizeIdea(updated) };
+    const authorName = await resolveAuthorNameByFingerprint(updated.authorFingerprint);
+    const commentsCount = await strapi.db.query('api::comment.comment').count({
+      where: {
+        idea: ideaId,
+      },
+    });
+
+    ctx.body = {
+      data: sanitizeIdea({
+        ...updated,
+        commentsCount,
+        authorName,
+      }),
+    };
+  },
+
+  async updateIdeaVisibility(ctx: Ctx) {
+    const ideaId = toPositiveInt(ctx.params.id);
+    if (!ideaId) {
+      sendError(ctx, 400, 'VALIDATION_ERROR', 'Invalid idea id');
+      return;
+    }
+
+    const idea = await strapi.db.query('api::idea.idea').findOne({
+      where: { id: ideaId },
+    });
+    if (!idea) {
+      sendError(ctx, 404, 'NOT_FOUND', 'Idea not found');
+      return;
+    }
+
+    const body = asObject(ctx.request.body);
+    if (typeof body.isHidden !== 'boolean') {
+      sendError(ctx, 400, 'VALIDATION_ERROR', 'isHidden must be boolean');
+      return;
+    }
+
+    const updated = await strapi.db.query('api::idea.idea').update({
+      where: { id: ideaId },
+      data: {
+        isHidden: body.isHidden,
+      },
+    });
+
+    const authorName = await resolveAuthorNameByFingerprint(updated.authorFingerprint);
+    const commentsCount = await strapi.db.query('api::comment.comment').count({
+      where: {
+        idea: ideaId,
+      },
+    });
+
+    ctx.body = {
+      data: sanitizeIdea({
+        ...updated,
+        commentsCount,
+        authorName,
+      }),
+    };
   },
 
   async deleteIdea(ctx: Ctx) {
@@ -505,114 +714,6 @@ export default {
 
     ctx.status = 204;
     ctx.body = null;
-  },
-
-  async listComments(ctx: Ctx) {
-    const targetRaw = asString(ctx.query.target);
-    const target = targetRaw ? sanitizeTarget(targetRaw) : null;
-    const hidden = toOptionalBoolean(ctx.query.isHidden);
-
-    if (targetRaw && !target) {
-      sendError(ctx, 400, 'VALIDATION_ERROR', 'Invalid comment target');
-      return;
-    }
-
-    if (ctx.query.isHidden !== undefined && hidden === null) {
-      sendError(ctx, 400, 'VALIDATION_ERROR', 'isHidden must be true or false');
-      return;
-    }
-
-    const makeWhere = () => (hidden === null ? {} : { isHidden: hidden });
-
-    const includeIdea = !target || target === 'idea';
-    const includeRoadmap = !target || target === 'roadmap';
-
-    const result: any[] = [];
-
-    if (includeIdea) {
-      const comments = await strapi.db.query('api::comment.comment').findMany({
-        where: makeWhere(),
-        orderBy: [{ createdAt: 'desc' }],
-        populate: {
-          idea: {
-            select: ['id'],
-          },
-        },
-      });
-      const authorNameByCommentId = await buildCommentAuthorNameMapById(comments);
-      const parentIds = Array.from(
-        new Set(
-          comments
-            .map((item: any) => extractIdeaParentId(item))
-            .filter((value): value is number => value !== null)
-        )
-      );
-      const parentMetaById = await loadParentMetaMap('idea', parentIds);
-      result.push(
-        ...comments.map((item: any) => {
-          const parentId = extractIdeaParentId(item);
-          const parentMeta = parentId ? parentMetaById.get(parentId) : null;
-
-          return {
-            parentId,
-            ...sanitizeComment(
-              {
-                ...item,
-                authorName: authorNameByCommentId.get(item.id),
-                parentTitle: parentMeta?.title ?? null,
-                parentStatus: parentMeta?.status ?? null,
-                parentExists: parentId !== null && parentMetaById.has(parentId),
-              },
-              'idea'
-            ),
-          };
-        })
-      );
-    }
-
-    if (includeRoadmap) {
-      const comments = await strapi.db.query('api::roadmap-comment.roadmap-comment').findMany({
-        where: makeWhere(),
-        orderBy: [{ createdAt: 'desc' }],
-        populate: {
-          roadmapItem: {
-            select: ['id'],
-          },
-        },
-      });
-      const authorNameByCommentId = await buildCommentAuthorNameMapById(comments);
-      const parentIds = Array.from(
-        new Set(
-          comments
-            .map((item: any) => extractRoadmapParentId(item))
-            .filter((value): value is number => value !== null)
-        )
-      );
-      const parentMetaById = await loadParentMetaMap('roadmap', parentIds);
-      result.push(
-        ...comments.map((item: any) => {
-          const parentId = extractRoadmapParentId(item);
-          const parentMeta = parentId ? parentMetaById.get(parentId) : null;
-
-          return {
-            parentId,
-            ...sanitizeComment(
-              {
-                ...item,
-                authorName: authorNameByCommentId.get(item.id),
-                parentTitle: parentMeta?.title ?? null,
-                parentStatus: parentMeta?.status ?? null,
-                parentExists: parentId !== null && parentMetaById.has(parentId),
-              },
-              'roadmap'
-            ),
-          };
-        })
-      );
-    }
-
-    result.sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
-    ctx.body = { data: result };
   },
 
   async moderateComment(ctx: Ctx) {
@@ -649,6 +750,22 @@ export default {
       where: { id: commentId },
       data: { isHidden: body.isHidden },
     });
+
+    if (target === 'roadmap' && body.isHidden !== existing.isHidden) {
+      const roadmapItemId =
+        typeof existing.roadmapItem === 'number'
+          ? existing.roadmapItem
+          : existing.roadmapItem?.id ?? null;
+
+      if (typeof roadmapItemId === 'number' && roadmapItemId > 0) {
+        await strapi.db.connection('roadmap_items').where({ id: roadmapItemId }).update({
+          comments_count: body.isHidden
+            ? strapi.db.connection.raw('GREATEST(COALESCE(comments_count, 0) - 1, 0)')
+            : strapi.db.connection.raw('COALESCE(comments_count, 0) + 1'),
+        });
+      }
+    }
+
     const authorName = await resolveCommentAuthorName(updated.userFingerprint);
     const parentId =
       target === 'idea' ? extractIdeaParentId(updated) : extractRoadmapParentId(updated);
