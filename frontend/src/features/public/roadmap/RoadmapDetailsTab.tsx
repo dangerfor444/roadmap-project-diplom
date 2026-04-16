@@ -35,10 +35,17 @@ export const RoadmapDetailsTab = ({
   roadmapItemId,
   onBack,
   userFingerprint,
+  onRoadmapItemChange,
 }: {
   roadmapItemId: number;
   onBack: () => void;
   userFingerprint: string;
+  onRoadmapItemChange?: (change: {
+    roadmapItemId: number;
+    votesCount?: number;
+    commentsCount?: number;
+    voted?: boolean;
+  }) => void;
 }) => {
   const [item, setItem] = useState<RoadmapDetails | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -104,11 +111,13 @@ export const RoadmapDetailsTab = ({
         localStorage.removeItem(votedKey);
         setAlreadyVoted(false);
         setItem((current) => (current ? { ...current, votesCount: result.votesCount } : current));
+        onRoadmapItemChange?.({ roadmapItemId, votesCount: result.votesCount, voted: false });
       } else {
         const result = await publicApi.voteRoadmapItem(roadmapItemId, userFingerprint);
         localStorage.setItem(votedKey, '1');
         setAlreadyVoted(true);
         setItem((current) => (current ? { ...current, votesCount: result.votesCount } : current));
+        onRoadmapItemChange?.({ roadmapItemId, votesCount: result.votesCount, voted: true });
       }
     } catch (requestError) {
       if (isAuthRequiredError(requestError)) {
@@ -152,6 +161,7 @@ export const RoadmapDetailsTab = ({
 
       setCommentText('');
       setCommentInfo(UI_TEXT.commentSuccess);
+      const nextCommentsCount = newComment.commentsCount;
       setItem((current) =>
         current
           ? {
@@ -161,6 +171,7 @@ export const RoadmapDetailsTab = ({
             }
           : current
       );
+      onRoadmapItemChange?.({ roadmapItemId, commentsCount: nextCommentsCount });
     } catch (requestError) {
       if (isAuthRequiredError(requestError)) {
         return;
@@ -204,22 +215,16 @@ export const RoadmapDetailsTab = ({
 
           <p className="description">{item.description}</p>
 
-          <div className="detail-summary">
-            {item.category ? (
+            <div className="detail-summary">
+              {item.category ? (
+                <p className="meta">
+                  {UI_TEXT.categoryPrefix}: <strong>{item.category}</strong>
+                </p>
+              ) : null}
               <p className="meta">
-                {UI_TEXT.categoryPrefix}: <strong>{item.category}</strong>
+                {UI_TEXT.createdAt}: {formatDate(item.createdAt)}
               </p>
-            ) : null}
-            <p className="meta">
-              {UI_TEXT.votes}: <strong>{item.votesCount}</strong>
-            </p>
-            <p className="meta">
-              {UI_TEXT.comments}: <strong>{item.commentsCount}</strong>
-            </p>
-            <p className="meta">
-              {UI_TEXT.createdAt}: {formatDate(item.createdAt)}
-            </p>
-          </div>
+            </div>
 
           <div className="vote-block">
             <button

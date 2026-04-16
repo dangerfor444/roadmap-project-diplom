@@ -1,6 +1,7 @@
 ﻿import type { FormEvent } from 'react';
 import { useEffect, useState } from 'react';
 import { ApiError, isAuthRequiredError, publicApi } from '../../../lib/api';
+import { getWriteStorageIdentity } from '../../../lib/write-auth';
 import type { IdeaSort, IdeaSummary } from '../../../types/public-api';
 import { IDEAS_SORTS, IDEA_STATUS_LABEL, formatDate } from '../../common/meta';
 import { EmptyState, ErrorState, LoadingState, errorMessage } from '../../common/ui';
@@ -45,17 +46,25 @@ const UI_TEXT = {
   retryAfterSuffix: ' с.',
   empty: 'Пока нет идей.',
   openDetails: 'Открыть детали',
-  votesLabel: 'Голосов',
   commentsLabel: 'Комментариев',
   authorLabel: 'Автор',
   gridView: 'Сетка',
   listView: 'Список',
 } as const;
 
+const getIdeaVotedKey = (ideaId: number, userFingerprint: string) =>
+  `idea:voted:${ideaId}:${getWriteStorageIdentity(userFingerprint)}`;
+
+const buildVotedIdeasMap = (ideas: IdeaSummary[], userFingerprint: string): Record<number, boolean> =>
+  Object.fromEntries(
+    ideas.map((idea) => [idea.id, localStorage.getItem(getIdeaVotedKey(idea.id, userFingerprint)) === '1'])
+  );
+
 export const IdeasTab = ({ userFingerprint }: { userFingerprint: string }) => {
   const [sort, setSort] = useState<IdeaSort>('latest');
   const [viewMode, setViewMode] = useState<IdeaViewMode>('grid');
   const [ideas, setIdeas] = useState<IdeaSummary[]>([]);
+  const [votedIdeas, setVotedIdeas] = useState<Record<number, boolean>>({});
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -73,6 +82,7 @@ export const IdeasTab = ({ userFingerprint }: { userFingerprint: string }) => {
     try {
       const nextIdeas = await publicApi.getIdeas(selectedSort);
       setIdeas(nextIdeas);
+      setVotedIdeas(buildVotedIdeasMap(nextIdeas, userFingerprint));
     } catch (requestError) {
       setError(errorMessage(requestError, UI_TEXT.loadError));
     } finally {
@@ -90,6 +100,7 @@ export const IdeasTab = ({ userFingerprint }: { userFingerprint: string }) => {
         const nextIdeas = await publicApi.getIdeas(sort);
         if (!isCancelled) {
           setIdeas(nextIdeas);
+          setVotedIdeas(buildVotedIdeasMap(nextIdeas, userFingerprint));
         }
       } catch (requestError) {
         if (!isCancelled) {
@@ -106,7 +117,7 @@ export const IdeasTab = ({ userFingerprint }: { userFingerprint: string }) => {
     return () => {
       isCancelled = true;
     };
-  }, [sort]);
+  }, [sort, userFingerprint]);
 
   const toggleIdeaForm = () => {
     setIsIdeaFormOpen((current) => !current);
@@ -116,6 +127,34 @@ export const IdeasTab = ({ userFingerprint }: { userFingerprint: string }) => {
 
   const openIdeaDetails = (ideaId: number) => {
     setSelectedIdeaId(ideaId);
+  };
+
+  const onIdeaChange = ({
+    ideaId,
+    votesCount,
+    commentsCount,
+    voted,
+  }: {
+    ideaId: number;
+    votesCount?: number;
+    commentsCount?: number;
+    voted?: boolean;
+  }) => {
+    setIdeas((current) =>
+      current.map((idea) =>
+        idea.id === ideaId
+          ? {
+              ...idea,
+              votesCount: votesCount ?? idea.votesCount,
+              commentsCount: commentsCount ?? idea.commentsCount,
+            }
+          : idea
+      )
+    );
+
+    if (typeof voted === 'boolean') {
+      setVotedIdeas((current) => ({ ...current, [ideaId]: voted }));
+    }
   };
 
   const onSubmitIdea = async (event: FormEvent<HTMLFormElement>) => {
@@ -150,6 +189,7 @@ export const IdeasTab = ({ userFingerprint }: { userFingerprint: string }) => {
 
       if (sort === 'latest') {
         setIdeas((current) => [createdIdea, ...current]);
+        setVotedIdeas((current) => ({ ...current, [createdIdea.id]: false }));
       } else {
         await loadIdeas(sort);
       }
@@ -301,8 +341,17 @@ export const IdeasTab = ({ userFingerprint }: { userFingerprint: string }) => {
                 {UI_TEXT.authorLabel}: <strong>{idea.authorName}</strong>
               </p>
               <p className="meta idea-card-meta">
-                {UI_TEXT.votesLabel}: <strong>{idea.votesCount}</strong> • {UI_TEXT.commentsLabel}:{' '}
-                <strong>{idea.commentsCount}</strong>
+                <span
+                  className={
+                    votedIdeas[idea.id] ? 'reaction-summary reaction-summary-active' : 'reaction-summary'
+                  }
+                >
+                  <span className="reaction-summary-icon" aria-hidden="true">
+                    {votedIdeas[idea.id] ? '♥' : '♡'}
+                  </span>
+                  <strong>{idea.votesCount}</strong>
+                </span>{' '}
+                • {UI_TEXT.commentsLabel}: <strong>{idea.commentsCount}</strong>
               </p>
               <p className="meta idea-card-date">{formatDate(idea.createdAt)}</p>
 
@@ -330,6 +379,7 @@ export const IdeasTab = ({ userFingerprint }: { userFingerprint: string }) => {
               ideaId={selectedIdeaId}
               onBack={() => setSelectedIdeaId(null)}
               userFingerprint={userFingerprint}
+              onIdeaChange={onIdeaChange}
             />
           </div>
         </div>

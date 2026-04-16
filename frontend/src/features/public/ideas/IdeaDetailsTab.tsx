@@ -35,10 +35,17 @@ export const IdeaDetailsTab = ({
   ideaId,
   onBack,
   userFingerprint,
+  onIdeaChange,
 }: {
   ideaId: number;
   onBack: () => void;
   userFingerprint: string;
+  onIdeaChange?: (change: {
+    ideaId: number;
+    votesCount?: number;
+    commentsCount?: number;
+    voted?: boolean;
+  }) => void;
 }) => {
   const [idea, setIdea] = useState<IdeaDetails | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -104,11 +111,13 @@ export const IdeaDetailsTab = ({
         localStorage.removeItem(votedKey);
         setAlreadyVoted(false);
         setIdea((current) => (current ? { ...current, votesCount: result.votesCount } : current));
+        onIdeaChange?.({ ideaId, votesCount: result.votesCount, voted: false });
       } else {
         const result = await publicApi.voteIdea(ideaId, userFingerprint);
         localStorage.setItem(votedKey, '1');
         setAlreadyVoted(true);
         setIdea((current) => (current ? { ...current, votesCount: result.votesCount } : current));
+        onIdeaChange?.({ ideaId, votesCount: result.votesCount, voted: true });
       }
     } catch (requestError) {
       if (isAuthRequiredError(requestError)) {
@@ -152,6 +161,7 @@ export const IdeaDetailsTab = ({
 
       setCommentText('');
       setCommentInfo(UI_TEXT.commentSuccess);
+      const nextCommentsCount = (idea?.commentsCount ?? 0) + 1;
       setIdea((current) =>
         current
           ? {
@@ -161,6 +171,7 @@ export const IdeaDetailsTab = ({
             }
           : current
       );
+      onIdeaChange?.({ ideaId, commentsCount: nextCommentsCount });
     } catch (requestError) {
       if (isAuthRequiredError(requestError)) {
         return;
@@ -204,20 +215,14 @@ export const IdeaDetailsTab = ({
 
           <p className="description">{idea.description}</p>
 
-          <div className="detail-summary">
-            <p className="meta">
-              {UI_TEXT.author}: <strong>{idea.authorName}</strong>
-            </p>
-            <p className="meta">
-              {UI_TEXT.votes}: <strong>{idea.votesCount}</strong>
-            </p>
-            <p className="meta">
-              {UI_TEXT.comments}: <strong>{idea.commentsCount}</strong>
-            </p>
-            <p className="meta">
-              {UI_TEXT.createdAt}: {formatDate(idea.createdAt)}
-            </p>
-          </div>
+            <div className="detail-summary">
+              <p className="meta">
+                {UI_TEXT.author}: <strong>{idea.authorName}</strong>
+              </p>
+              <p className="meta">
+                {UI_TEXT.createdAt}: {formatDate(idea.createdAt)}
+              </p>
+            </div>
 
           <div className="vote-block">
             <button

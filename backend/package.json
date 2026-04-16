@@ -11,6 +11,7 @@
     "develop": "strapi develop",
     "seed:demo": "node scripts/seed-demo.js",
     "seed:comments": "node scripts/seed-extra-comments.js",
+    "seed:roadmap:q2": "node scripts/seed-roadmap-q2.js",
     "start": "strapi start",
     "strapi": "strapi",
     "upgrade": "npx @strapi/upgrade latest",
